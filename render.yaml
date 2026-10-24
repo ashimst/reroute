@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: retail-flow-api
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: qwen/qwen3.8-27b
+      - key: OPENJEV_BACKEND
+        value: mock
+      - key: ROUTING_CONFIDENCE_THRESHOLD
+        value: "0.6"
+      - key: RESOLUTION_CONFIDENCE_THRESHOLD
+        value: "0.5"

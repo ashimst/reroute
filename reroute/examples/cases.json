@@ -1,0 +1,122 @@
+[
+  {
+    "case_id": "CASE-001",
+    "order_id": "e481f51cbdc54678b7cc49136f2d6af7",
+    "customer_message": "My product arrived damaged and I want a refund.",
+    "scenario": "damaged_item",
+    "expected_route": "returns",
+    "notes": "Delivered 2017-10-10, EDD 2017-10-18. Delivered on time. Damage report is hypothetical – tests RET-09/RET-10 window logic relative to current date."
+  },
+  {
+    "case_id": "CASE-002",
+    "order_id": "53cdb2fc8bc7dce0b6741e2150273451",
+    "customer_message": "I want to return this item. It is not what I needed.",
+    "scenario": "standard_return",
+    "expected_route": "returns",
+    "notes": "Delivered 2018-08-07. Tests standard 30-day return window (RET-02/RET-03). Window long expired – expect denial."
+  },
+  {
+    "case_id": "CASE-003",
+    "order_id": "47770eb9100c2d0c44946d9cf07ec65d",
+    "customer_message": "I received the wrong item. This is not what I ordered. I want a replacement.",
+    "scenario": "incorrect_item",
+    "expected_route": "returns",
+    "notes": "Delivered 2018-08-17. Tests incorrect item path (RET-11). Report window of 14 days expired – expect denial."
+  },
+  {
+    "case_id": "CASE-004",
+    "order_id": "949d5b44dbf5de918fe9c16f97b45f8a",
+    "customer_message": "My order is three days late and I have not received it yet.",
+    "scenario": "late_delivery_minor",
+    "expected_route": "delivery",
+    "notes": "EDD 2017-12-15. Tests DEL-07 minor delay path (1-3 days). Since data is historical the delay calc uses today vs EDD – will show significant delay."
+  },
+  {
+    "case_id": "CASE-005",
+    "order_id": "ad21c59c0840e6cb83a9ceb5573f8159",
+    "customer_message": "My package still has not arrived. It is way past the estimated delivery date.",
+    "scenario": "late_delivery_major",
+    "expected_route": "delivery",
+    "notes": "EDD 2018-02-26, delivered 2018-02-16. Actually delivered early. Tests delivery status inspection."
+  },
+  {
+    "case_id": "CASE-006",
+    "order_id": "76c6e866289321a7c93b82b54852dc33",
+    "customer_message": "The tracking says my package was delivered but I did not receive anything. I have checked everywhere.",
+    "scenario": "delivered_but_missing",
+    "expected_route": "delivery",
+    "notes": "Delivered 2017-02-02. Tests DEL-12 marked-delivered-but-missing path. Report is outside 7-day window → expects escalation."
+  },
+  {
+    "case_id": "CASE-007",
+    "order_id": "ee64d42b8cf066f35eac1cf57de1aa85",
+    "customer_message": "My order has been in shipped status for weeks and is not moving.",
+    "scenario": "stuck_in_transit",
+    "expected_route": "delivery",
+    "notes": "Status: shipped. Tests DEL-11 stuck-in-transit logic."
+  },
+  {
+    "case_id": "CASE-008",
+    "order_id": "0016dfedd97fc2950e388d2971d718c7",
+    "customer_message": "I was charged twice for my order. I can see two payments on my bank statement.",
+    "scenario": "duplicate_payment",
+    "expected_route": "payment",
+    "notes": "This order has 2 payment records. Tests PAY-06 duplicate charge detection."
+  },
+  {
+    "case_id": "CASE-009",
+    "order_id": "002f19a65a2ddd70a090297872e6d64e",
+    "customer_message": "What is the status of my payment? I am not sure if it went through.",
+    "scenario": "payment_status_query",
+    "expected_route": "payment",
+    "notes": "Order has multiple payment records. Tests PAY-03 payment status check."
+  },
+  {
+    "case_id": "CASE-010",
+    "order_id": "1b9ecfe83cdc259250e1a8aca174f0ad",
+    "customer_message": "I cancelled my order but I have not received my refund yet.",
+    "scenario": "cancelled_order_refund",
+    "expected_route": "payment",
+    "notes": "Order status: canceled. Tests PAY-08 / REF-08 cancelled order refund path."
+  },
+  {
+    "case_id": "CASE-011",
+    "order_id": "000576fe39319847cbb9d288c5617fa6",
+    "customer_message": "My headphones arrived completely smashed. The box looked like it was dropped from a great height. I want a full refund immediately.",
+    "scenario": "damaged_item_high_value",
+    "expected_route": "returns",
+    "notes": "Order value ~$810. Tests RET-17 escalation threshold (>$500). Expects escalation to human."
+  },
+  {
+    "case_id": "CASE-012",
+    "order_id": "6514b8ad8028c9f2cc2374ded245783f",
+    "customer_message": "There was a missing item in my delivery. The box was sealed but one of the products was not inside.",
+    "scenario": "missing_item",
+    "expected_route": "returns",
+    "notes": "Delivered 2017-05-26. Tests RET-12 missing item path. Date is historical so 14-day window has expired."
+  },
+  {
+    "case_id": "CASE-013",
+    "order_id": "a4591c265e18cb1dcee52889e2d8acc3",
+    "customer_message": "I am not happy with my purchase and would like to return it.",
+    "scenario": "ambiguous_return_request",
+    "expected_route": "returns",
+    "notes": "Ambiguous message. No specific damage/incorrect signal. Tests keyword detection default to standard return."
+  },
+  {
+    "case_id": "CASE-014",
+    "order_id": "714fb133a6730ab81fa1d3c1b2007291",
+    "customer_message": "I need to speak to someone about a billing problem on my account. Something does not look right.",
+    "scenario": "ambiguous_payment_escalation",
+    "expected_route": "payment",
+    "notes": "Vague payment complaint. Tests whether routing correctly identifies payment route from limited signal."
+  },
+  {
+    "case_id": "CASE-015",
+    "order_id": "INVALID-ORDER-99999",
+    "customer_message": "I want a refund for my order.",
+    "scenario": "invalid_order_id",
+    "expected_route": "returns",
+    "notes": "Deliberately invalid order ID. Tests graceful error handling – expects escalate=true with data error."
+  }
+]

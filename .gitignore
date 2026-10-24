@@ -1,0 +1,58 @@
+# Environment & secrets
+**/.env
+**/.env.*
+**/.env.local
+!**/.env.example
+
+# Python
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Unused root raw datasets (the active engine datasets are in reroute/data/olist/)
+/data/
+
+# Data / ML artifacts
+reroute/data/policy_index/
+*.index
+*.faiss
+*.pt
+*.pth
+*.onnx
+
+# Node / React
+**/node_modules/
+web/frontend/dist/
+web/frontend/.vite/
+web/frontend/coverage/
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+logs/
+run_out.txt
+*.tmp
+*.bak
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
