@@ -224,23 +224,35 @@ curl -X POST http://localhost:8001/api/cases \
 
 ---
 
+## Deployment (100% Free)
+
+REROUTE is fully configured for zero-cost production hosting:
+- **Frontend**: **Cloudflare Pages** (Free CDN, unlimited bandwidth, instant SSL, zero cold starts)
+- **Backend**: **Hugging Face Spaces** (Free 16 GB RAM + 2 vCPU Docker container) or **Render.com** (Free Web Service)
+- **LLM Reasoning**: **Groq Cloud** (Free fast inference)
+
+👉 **For the complete, step-by-step, zero-ambiguity deployment guide, see [`DEPLOYMENT.md`](DEPLOYMENT.md).**
+
+---
+
 ## Environment Variables
 
-### `reroute/.env`
+### `backend/.env`
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `GROQ_API_KEY` | For LLM fallback | — | Get from [console.groq.com](https://console.groq.com) |
 | `GROQ_MODEL` | No | `qwen/qwen3.8-27b` | Groq model name |
 | `OPENJEV_API_KEY` | No | — | Enables semantic routing (vs keywords) |
+| `CORS_ORIGINS` | No | `*` | Comma-separated allowed origins or `*` |
 | `ROUTING_CONFIDENCE_THRESHOLD` | No | `0.6` | Below this → Groq route classification |
 | `RESOLUTION_CONFIDENCE_THRESHOLD` | No | `0.5` | Below this → Groq resolution fallback |
 
-### `web/frontend/.env`
+### `frontend/.env`
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VITE_API_URL` | `http://localhost:8001` | Backend URL for production builds |
+| `VITE_API_URL` | `http://localhost:8001` | Backend public URL (e.g. `https://reroute-api.hf.space`) |
 
 ---
 
@@ -248,14 +260,15 @@ curl -X POST http://localhost:8001/api/cases \
 
 ```bash
 # Backend unit & integration tests (58 tests)
-cd reroute/
+cd backend/
 pytest
 
 # Frontend linter
-cd web/frontend/
+cd frontend/
 npm run lint
 
 # Frontend production build
+cd frontend/
 npm run build
 ```
 
@@ -267,3 +280,4 @@ npm run build
 - **OpenJEV**: Without `OPENJEV_API_KEY`, routing uses keyword matching (confidence ≤ 0.75). Add a key from [codiv.ai](https://api.codiv.ai) for semantic routing.
 - **Groq**: Without `GROQ_API_KEY`, the LLM fallback escalates all uncertain cases to human review.
 - **No persistence**: Case history is stored in browser `localStorage` only.
+
