@@ -86,41 +86,16 @@ with gr.Blocks(title="REROUTE Exception Engine") as demo:
             """
         )
 
-# 3. Inject engine state and routers directly into demo.app (which is FastAPI/Starlette)
-demo.app.state.run_case = _run_case
-demo.app.state.loader = _loader
-demo.app.state.repo = _repo
-demo.app.state.graph = graph
+# 3. Mount complete FastAPI application directly onto Gradio
+from app.main import app as fastapi_app
 
-# Configure CORS for custom domain (reroute.noesisframeworks.com), Cloudflare Pages, and local dev
-demo.app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://reroute.noesisframeworks.com",
-        "http://reroute.noesisframeworks.com",
-        "https://*.pages.dev",
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "*",
-    ],
-    allow_origin_regex=r"^https?://.*",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+fastapi_app.state.run_case = _run_case
+fastapi_app.state.loader = _loader
+fastapi_app.state.repo = _repo
+fastapi_app.state.graph = graph
 
-# Include all application routers
-demo.app.include_router(analytics.router)
-demo.app.include_router(auth.router)
-demo.app.include_router(cdn.router)
-demo.app.include_router(cases.router)
-demo.app.include_router(chat.router)
-demo.app.include_router(orders.router)
-demo.app.include_router(health.router)
-demo.app.include_router(info.router)
-demo.app.include_router(workspaces.router)
-
-log.info("All API routers mounted onto Gradio app")
+demo.app.mount("/", fastapi_app)
+log.info("FastAPI backend engine mounted onto Gradio app at /")
 
 # 4. Launch Gradio natively on port 7860 (ssr_mode=False avoids running Node.js)
 if __name__ == "__main__":
