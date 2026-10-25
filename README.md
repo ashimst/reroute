@@ -1,7 +1,7 @@
-# Retail Flow — REROUTE
+# reroute — Retail Exception Engine
 
-> **Retail Exception Routing and Resolution Engine**  
-> A full-stack AI system that routes customer order complaints through a structured pipeline: semantic routing → policy retrieval → deterministic tool execution → LLM fallback.
+> **Deterministic LangGraph Retail Exception Engine**  
+> A high-performance, dual-process cognitive exception resolution engine designed with Noesis Frameworks architecture. Combines fast deterministic reflex triaging (System 1) with deliberative LLM reasoning (System 2) across real e-commerce transactions.
 
 ![Tech Stack](https://img.shields.io/badge/LangGraph-workflow-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-backend-green) ![React](https://img.shields.io/badge/React-frontend-61DAFB) ![Groq](https://img.shields.io/badge/Groq-LLM-orange)
 
@@ -29,74 +29,89 @@ Resolution or Human Escalation
 
 ---
 
+---
+
 ## Project Structure
 
 ```
 retail_flow/
-├── reroute/              Python exception engine (LangGraph + tools + RAG)
-│   ├── data/             Olist CSV files + policy documents
-│   ├── src/              Engine source code
-│   ├── tests/            58 unit + integration tests
-│   ├── examples/         15 pre-built example cases
-│   └── main.py           CLI runner
+├── backend/                  FastAPI server & LangGraph Exception Engine
+│   ├── app/                  FastAPI application layer
+│   │   ├── routers/          cases.py  chat.py  health.py  info.py  orders.py
+│   │   ├── schemas/          case.py  chat.py (Pydantic models)
+│   │   └── main.py           FastAPI entrypoint, CORS, warmup lifespan
+│   ├── src/                  REROUTE Intelligence Core
+│   │   ├── agents/           returns.py  delivery.py  payment.py
+│   │   ├── graph/            workflow.py (LangGraph StateGraph DAG)
+│   │   ├── routing/          jev_router.py (OpenJEV classifier)
+│   │   ├── tools/            return_windows.py  delivery_checks.py  payment_checks.py
+│   │   ├── rag/              policy_retriever.py (FAISS vector store)
+│   │   ├── llm/              groq_fallback.py (Groq Qwen 3.8 / 2.5)
+│   │   ├── data/             loader.py  repository.py
+│   │   └── config.py         Central configuration & business thresholds
+│   ├── data/                 Olist CSV dataset + Markdown policies
+│   │   ├── olist/            99k orders, 112k items, 33k products, 104k payments
+│   │   ├── policies/         returns.md  delivery.md  payments.md  refunds.md
+│   │   └── policy_index/     FAISS vector index cache
+│   ├── examples/             cases.json (15 pre-built benchmark test scenarios)
+│   ├── tests/                58 unit & integration tests
+│   ├── requirements.txt      Unified Python dependencies
+│   ├── main.py               Standalone CLI runner
+│   └── .env.example
 │
-└── web/
-    ├── backend/          FastAPI server
-    │   ├── app/
-    │   │   ├── main.py           Startup, CORS, lifespan warmup
-    │   │   ├── routers/          cases.py  orders.py  health.py
-    │   │   └── schemas/          Pydantic response models
-    │   └── requirements.txt
-    │
-    └── frontend/         React + Vite + TypeScript + Tailwind
-        └── src/
-            ├── lib/              api.ts  utils.ts
-            ├── components/       Layout  CaseForm  ResolutionCard  OrderCard
-            └── pages/            SubmitPage  OrderLookupPage  HistoryPage
+├── frontend/                 React + Vite + TypeScript + Tailwind CSS
+│   └── src/
+│       ├── components/       Layout  CaseForm  ResolutionCard  OrderCard  EngineStatus
+│       ├── lib/              api.ts (REST & SSE client)  utils.ts
+│       └── pages/            ChatPage  SubmitPage  OrderLookupPage  HistoryPage  InfoPage
+│
+├── docs/                     System Documentation
+│   ├── architecture.md       Full architectural details, state machine diagrams & flow
+│   └── dataset_and_scenarios.md  Olist dataset breakdown & 15 test scenarios catalog
+│
+├── Dockerfile                Production Docker build
+├── render.yaml               Cloud deployment configuration
+└── README.md
 ```
 
 ---
 
 ## Quick Start
 
-### 1. Install engine dependencies
+### 1. Configure backend environment
 
 ```bash
-cd reroute/
+cd backend/
 pip install -r requirements.txt
+cp .env.example .env
+# Edit .env — add GROQ_API_KEY for optional LLM fallback reasoning
 ```
 
-### 2. Configure environment
+### 2. Start the FastAPI backend
 
 ```bash
-cp reroute/.env.example reroute/.env
-# Edit reroute/.env — add GROQ_API_KEY if you want LLM fallback
-```
-
-### 3. Start the FastAPI backend
-
-```bash
-cd web/backend/
-pip install -r requirements.txt
-
-# Windows
-uvicorn app.main:app --reload --port 8001
-
-# macOS / Linux
+cd backend/
 uvicorn app.main:app --reload --port 8001
 ```
 
-First startup takes ~20 seconds to load Olist orders and warm up the policy vector index (cached after that).
+First startup takes ~15 seconds to load the Olist dataset and verify the FAISS policy vector index (subsequent starts are instantaneous).
 
-### 4. Start the React frontend
+### 3. Start the React frontend
 
 ```bash
-cd web/frontend/
+cd frontend/
 npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**
+Open **http://localhost:5173** to launch the application.
+
+---
+
+## Architecture & Dataset Documentation
+
+- **System Architecture & Design**: [`docs/architecture.md`](file:///c:/Projects/retail_flow/docs/architecture.md)
+- **Olist Dataset Reference & Test Scenarios**: [`docs/dataset_and_scenarios.md`](file:///c:/Projects/retail_flow/docs/dataset_and_scenarios.md)
 
 ---
 

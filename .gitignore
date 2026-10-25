@@ -23,7 +23,9 @@ env/
 /data/
 
 # Data / ML artifacts
-reroute/data/policy_index/
+backend/data/policy_index/
+backend/data/workspaces/*.json
+backend/data/workspaces/policies/
 *.index
 *.faiss
 *.pt
@@ -32,9 +34,9 @@ reroute/data/policy_index/
 
 # Node / React
 **/node_modules/
-web/frontend/dist/
-web/frontend/.vite/
-web/frontend/coverage/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
 
 # IDE & OS
 .vscode/

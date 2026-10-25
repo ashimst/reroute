@@ -10,17 +10,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy requirement files first for layer caching
-COPY web/backend/requirements.txt /app/requirements.txt
+COPY backend/requirements.txt /app/requirements.txt
 
 # Install python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy engine and backend code
-COPY reroute /app/reroute
-COPY web/backend /app/web/backend
+# Copy backend code and data
+COPY backend /app/backend
 
-WORKDIR /app/web/backend
+WORKDIR /app/backend
 
 # Default port: 7860 (Hugging Face Spaces default) or read from $PORT (Render/Cloud Run)
 ENV PORT=7860

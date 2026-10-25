@@ -1,0 +1,30 @@
+# Web & API framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.10.0
+
+# Core workflow and orchestration
+langgraph>=1.1.10
+langchain-core>=1.3.3
+
+# Cactus Needle for deterministic tool execution
+cactus-needle==3.0.5
+
+# Groq LLM fallback
+groq>=0.30.0,<1.0.0
+
+# Data analysis & loading
+pandas>=2.2.0
+numpy>=1.26.0
+
+# RAG & Semantic vector search
+faiss-cpu>=1.9.0
+sentence-transformers>=3.3.0
+
+# Configuration & environment
+python-dotenv>=1.0.1
+
+# Testing
+pytest>=8.3.0
+pytest-asyncio>=1.4.0
+httpx>=0.28.0
