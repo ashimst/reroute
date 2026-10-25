@@ -86,7 +86,7 @@ with gr.Blocks(title="REROUTE Exception Engine") as demo:
             """
         )
 
-# 3. Mount complete FastAPI application directly onto Gradio
+# 3. Mount all FastAPI routes and middleware directly onto Gradio app
 from app.main import app as fastapi_app
 
 fastapi_app.state.run_case = _run_case
@@ -94,8 +94,23 @@ fastapi_app.state.loader = _loader
 fastapi_app.state.repo = _repo
 fastapi_app.state.graph = graph
 
-demo.app.mount("/", fastapi_app)
-log.info("FastAPI backend engine mounted onto Gradio app at /")
+demo.app.state.run_case = _run_case
+demo.app.state.loader = _loader
+demo.app.state.repo = _repo
+demo.app.state.graph = graph
+
+# Prepend FastAPI routes before Gradio routes so /api/* takes precedence
+demo.app.router.routes = list(fastapi_app.router.routes) + list(demo.app.router.routes)
+
+# Enable CORS on demo.app for frontend requests
+demo.app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https?://.*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+log.info("FastAPI backend engine and CORS directly registered on Gradio app")
 
 # 4. Launch Gradio natively on port 7860 (ssr_mode=False avoids running Node.js)
 if __name__ == "__main__":
