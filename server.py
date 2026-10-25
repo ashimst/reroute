@@ -86,7 +86,7 @@ with gr.Blocks(title="REROUTE Exception Engine") as demo:
             """
         )
 
-# 3. Mount all FastAPI routes and middleware directly onto Gradio app
+# 3. Mount Gradio interface onto the primary FastAPI engine
 from app.main import app as fastapi_app
 
 fastapi_app.state.run_case = _run_case
@@ -94,25 +94,12 @@ fastapi_app.state.loader = _loader
 fastapi_app.state.repo = _repo
 fastapi_app.state.graph = graph
 
-demo.app.state.run_case = _run_case
-demo.app.state.loader = _loader
-demo.app.state.repo = _repo
-demo.app.state.graph = graph
+app = gr.mount_gradio_app(fastapi_app, demo, path="/")
+log.info("Gradio UI mounted onto FastAPI parent engine at /")
 
-# Prepend FastAPI routes before Gradio routes so /api/* takes precedence
-demo.app.router.routes = list(fastapi_app.router.routes) + list(demo.app.router.routes)
-
-# Enable CORS on demo.app for frontend requests
-demo.app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"^https?://.*",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-log.info("FastAPI backend engine and CORS directly registered on Gradio app")
-
-# 4. Launch Gradio natively on port 7860 (ssr_mode=False avoids running Node.js)
+# 4. Launch Uvicorn server on port 7860 (Hugging Face default)
 if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", 7860))
-    demo.launch(server_name="0.0.0.0", server_port=port, ssr_mode=False)
+    uvicorn.run(app, host="0.0.0.0", port=port)
+
