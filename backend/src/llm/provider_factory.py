@@ -44,10 +44,10 @@ class LLMProviderFactory:
             
             try:
                 from groq import Groq
-                client = Groq(api_key=key)
+                client: Any = Groq(api_key=key)
                 resp = client.chat.completions.create(
                     model=selected_model,
-                    messages=messages,  # type: ignore[arg-type]
+                    messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
