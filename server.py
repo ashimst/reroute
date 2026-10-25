@@ -10,7 +10,7 @@ import os
 import sys
 from pathlib import Path
 
-# Add backend directory to sys.path
+# Add backend directory to sys.path so 'app' and 'src' resolve directly
 ROOT_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = ROOT_DIR / "backend"
 if str(BACKEND_DIR) not in sys.path:
@@ -46,8 +46,8 @@ with gr.Blocks(title="REROUTE Exception Engine") as demo:
             """
         )
 
-# Mount Gradio onto the existing FastAPI app at /status or /
-app = gr.mount_gradio_app(fastapi_app, demo, path="/status")
+# Mount Gradio onto the existing FastAPI app at /
+app = gr.mount_gradio_app(fastapi_app, demo, path="/")
 
 if __name__ == "__main__":
     import uvicorn
