@@ -74,11 +74,9 @@ demo.app.state.loader = _loader
 demo.app.state.repo = _repo
 # ZeroGPU compatibility for Hugging Face Spaces (in case ZeroGPU hardware is selected)
 try:
-    import spaces
-    @spaces.GPU
-    def _zero_gpu_startup():
-        return True
-    _zero_gpu_startup()
+    import importlib
+    _spaces = importlib.import_module("spaces")
+    _spaces.GPU(lambda: True)()
     log.info("ZeroGPU compatibility hook registered")
 except Exception:
     pass
