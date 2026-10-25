@@ -18,7 +18,10 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Optional, cast
+
+if TYPE_CHECKING:
+    import faiss
 
 import numpy as np
 
@@ -27,8 +30,8 @@ from src.config import POLICY_DIR, VECTOR_STORE_PATH
 log = logging.getLogger(__name__)
 
 # ── Lazy imports (heavy deps loaded only when retriever is first used) ─────────
-_embedder = None
-_index = None
+_embedder: Any = None
+_index: Any = None
 _chunks: list[dict] = []   # [{id, text, source_file, full_text}]
 
 
@@ -133,7 +136,7 @@ def _build_index(chunks: list[dict]):
     embeddings = _embed(texts).astype(np.float32)
     dim = embeddings.shape[1]
     index = faiss.IndexFlatIP(dim)   # inner-product on normalised vecs = cosine
-    index.add(embeddings)
+    cast(Any, index).add(embeddings)
     return index
 
 
@@ -181,6 +184,8 @@ def retrieve(query: str, top_k: int = 5) -> list[dict]:
     policy files loaded at startup.
     """
     _ensure_loaded()
+    if _index is None:
+        raise RuntimeError("Policy vector index failed to initialize or load.")
 
     query_vec = _embed([query]).astype(np.float32)
     scores, indices = _index.search(query_vec, top_k)

@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from typing import Any
 import uuid
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from app.schemas.case import CaseRequest, CaseResponse, ExampleCase, GroqResult, PolicyHit
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/cases", tags=["cases"])
 
 def _find_examples_file() -> Path:
@@ -32,7 +34,7 @@ def _find_examples_file() -> Path:
 _EXAMPLES_FILE = _find_examples_file()
 
 
-def _clean_state(state: dict) -> dict:
+def _clean_state(state: Any) -> dict:
     """Strip non-serialisable objects from a CaseState dict."""
     def _safe(v):
         if isinstance(v, dict):

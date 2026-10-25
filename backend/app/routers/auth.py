@@ -168,7 +168,10 @@ def get_current_user_optional(authorization: Optional[str] = Header(None)) -> Op
         _save_sessions()
         return None
     users = _load_users()
-    user = users.get(session.get("user_id"))
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    user = users.get(str(user_id))
     return user
 
 

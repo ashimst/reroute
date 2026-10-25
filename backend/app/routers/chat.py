@@ -203,14 +203,14 @@ async def _generate(body: ChatRequest, app_state) -> AsyncIterator[str]:
     # ── Step 1: System-1 intent decision ─────────────────────────────────────
     decision = _system1_intent(last_user, body.order_id)
     log.info("[chat] session=%s intent=%s conf=%.2f", body.session_id, decision.intent, decision.confidence)
-    decision_dict = decision.model_dump() if hasattr(decision, "model_dump") else decision.dict()
+    decision_dict = decision.model_dump()
     yield _sse("intent", decision_dict)
 
     result = None
 
     # ── Step 2a: tool_execution path ─────────────────────────────────────────
     if decision.intent == "tool_execution":
-        order_id = decision.detected_order_id or body.order_id
+        order_id = (decision.detected_order_id or body.order_id or "").strip()
 
         # Return request quota check for Free Tier accounts
         is_return_issue = any(k in last_user.lower() for k in ["return", "refund", "damaged", "broken", "defective", "smashed"])
@@ -235,7 +235,7 @@ async def _generate(body: ChatRequest, app_state) -> AsyncIterator[str]:
                 run_case, case_id, order_id, last_user
             )
             result = _build_response(_clean_state(raw_state))
-            result_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
+            result_dict = result.model_dump()
             yield _sse("tool_result", result_dict)
 
             # Narrate the structured result via Groq streaming
@@ -299,13 +299,15 @@ async def _generate(body: ChatRequest, app_state) -> AsyncIterator[str]:
         except Exception as exc:
             log.exception("[chat] Groq streaming failed: %s", exc)
             if result:
-                yield _sse("text", f"Resolution for order #{result.order_id}: {result.resolution.upper()}. {result.resolution_detail or ''}")
+                res_str = (result.resolution or "processed").upper()
+                yield _sse("text", f"Resolution for order #{result.order_id}: {res_str}. {result.resolution_detail or ''}")
             else:
                 yield _sse("text", f"I'm here to assist with your order. (Note: LLM stream experienced an error: {exc})")
     else:
         # Graceful response when GROQ_API_KEY is not configured
         if result:
-            yield _sse("text", f"For order #{result.order_id}, our resolution is **{result.resolution.upper()}**.\n\n{result.resolution_detail or 'Processed according to policy.'}")
+            res_str = (result.resolution or "processed").upper()
+            yield _sse("text", f"For order #{result.order_id}, our resolution is **{res_str}**.\n\n{result.resolution_detail or 'Processed according to policy.'}")
         else:
             yield _sse("text", "Hello! I am REROUTE Assistant. Please provide your order ID (32 hex characters) and describe your issue with returns, delivery, or payment so I can inspect it.")
 
