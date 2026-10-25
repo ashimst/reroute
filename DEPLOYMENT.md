@@ -1,194 +1,153 @@
-# Zero-Cost Production Deployment Guide
+# Production Deployment Guide (100% Free Tier)
 
-This guide provides an **unambiguous, step-by-step, 100% free** deployment procedure for **REROUTE**:
-- **Frontend**: Hosted on **Cloudflare Pages** (Free: Unlimited bandwidth, global CDN, automated SSL, custom domain support).
-- **Backend**: Hosted on **Hugging Face Spaces** (Free: 16 GB RAM + 2 vCPU, persistent Docker container, no sleep/cold starts) OR **Render.com** (Free tier Web Service).
-- **AI/LLM Fallback**: Hosted on **Groq Cloud** (Free tier with instant inference for Qwen 2.5 / LLaMA 3.3).
+This guide provides an **unambiguous, step-by-step, zero-cost** deployment procedure for **REROUTE**:
+- **Frontend**: **Cloudflare Pages** (Free: Unlimited bandwidth, global edge CDN, automated SSL, custom domain support).
+- **Backend**: **Hugging Face Spaces (Gradio SDK)** (Free: **16 GB RAM** + 2 vCPU, zero memory bottleneck for PyTorch/FAISS/Pandas, NO Docker needed, NO credit card needed).
+- **AI/LLM Fallback**: **Groq Cloud** (Free fast inference for Qwen 2.5 / LLaMA 3.3).
 
 ---
 
-## Architecture Overview
+## 1. What is Gradio and Why Are We Using It?
+
+### What is Gradio?
+[Gradio](https://gradio.app/) is an open-source Python framework created by Hugging Face. Under the hood, **Gradio is built directly on top of FastAPI and Starlette**.
+
+### Why Gradio instead of Docker?
+1. **Docker Restrictions**: Hugging Face recently restricted standalone Docker spaces to prevent abuse (crypto mining, etc.), requiring credit card or phone verification.
+2. **Gradio Spaces are 100% Unrestricted & Free**: Hugging Face gives **16 GB of RAM** and **2 vCPU** for FREE to all standard Python/Gradio Spaces without asking for any credit card or payment info.
+3. **Seamless FastAPI Mounting**: Gradio provides `gr.mount_gradio_app(fastapi_app, demo, path="/")`. This allows our existing FastAPI engine (`/api/cases`, `/api/chat`, `/api/health`, `/api/orders`, `/api/docs`) to run natively with 16 GB of memory, while giving visitors a sleek status dashboard at `/`.
+
+---
+
+## 2. High-Level Architecture
 
 ```
-┌─────────────────────────────────┐
-│     Cloudflare Pages            │
-│   (React 19 + Vite SPA)         │
-│   https://reroute.pages.dev     │
-└────────────────┬────────────────┘
-                 │
-          HTTPS  │ REST / SSE Stream
-                 ▼
-┌─────────────────────────────────┐
-│     Backend Docker Container    │
-│   (FastAPI + FAISS + LangGraph) │
-│   Port: 7860 or 8000            │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│        Groq Cloud API           │
-│   (Free Tier LLM Fallback)      │
-└─────────────────────────────────┘
+┌──────────────────────────────────────┐
+│        Cloudflare Pages              │
+│      (React 19 + Vite SPA)           │
+│    https://reroute.pages.dev         │
+└──────────────────┬───────────────────┘
+                   │
+            HTTPS  │ REST / SSE Stream (/api/*)
+                   ▼
+┌──────────────────────────────────────┐
+│     Hugging Face Space (Gradio)      │
+│   2 vCPU • 16 GB RAM • Free Forever  │
+│    FastAPI + FAISS + LangGraph       │
+│  https://<user>-reroute-api.hf.space │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│           Groq Cloud API             │
+│      (Free Tier LLM Fallback)        │
+└──────────────────────────────────────┘
 ```
 
 ---
 
-## Pre-requisites (All 100% Free, No Credit Card Required)
+## 3. Step-by-Step Deployment Walkthrough
 
-1. **GitHub Account**: Your code is already pushed to [github.com/ashimst/reroute](https://github.com/ashimst/reroute.git).
-2. **Cloudflare Account**: Sign up free at [cloudflare.com](https://dash.cloudflare.com/sign-up).
-3. **Backend Host Account**:
-   - **Recommended**: Sign up free at [huggingface.co](https://huggingface.co/join) (Provides **16 GB RAM**, ideal for FAISS and SentenceTransformers without memory crashes).
-   - **Alternative**: Sign up free at [render.com](https://render.com).
-4. **Groq API Key (Optional but recommended for LLM fallback)**:
-   - Generate free key at [console.groq.com/keys](https://console.groq.com/keys).
+### Step 1: Get a Free Groq API Key
+1. Go to [console.groq.com/keys](https://console.groq.com/keys) and sign in.
+2. Click **Create API Key** → Name it `reroute-prod` → Copy the key (`gsk_...`).
 
 ---
 
-## Part 1: Deploy Backend (Choose Option A or Option B)
+### Step 2: Deploy Backend to Hugging Face Spaces (Gradio SDK)
 
-Deploy the backend first so you have your public API URL ready for the frontend.
-
-### Option A: Hugging Face Spaces (Recommended — 16 GB RAM, 100% Free Forever)
-
-Hugging Face Spaces gives 16 GB RAM for free, which runs the FAISS vector index and Olist dataset with zero memory bottlenecks.
-
+#### 1. Create the Space on Hugging Face
 1. Go to [huggingface.co/new-space](https://huggingface.co/new-space).
 2. Configure your Space:
    - **Space name**: `reroute-api`
-   - **License**: `mit` or `apache-2.0`
-   - **Select the Space SDK**: Click **Docker**
-   - **Docker template**: Choose **Blank**
-   - **Space Hardware**: Choose **CPU basic • 2 vCPU • 16 GB RAM • Free**
+   - **License**: `mit`
+   - **Select the Space SDK**: Click **Gradio** *(Do NOT click Docker)*
+   - **Gradio template**: Choose **Blank**
+   - **Space Hardware**: **CPU basic • 2 vCPU • 16 GB RAM • Free**
    - **Visibility**: **Public**
 3. Click **Create Space**.
-4. Now push your GitHub repository code to this Space:
-   - In your local terminal inside `c:\Projects\retail_flow`, run:
-     ```bash
-     git remote add hf https://huggingface.co/spaces/<YOUR_HF_USERNAME>/reroute-api
-     git push hf main
-     ```
-     *(Enter your Hugging Face username and Access Token when prompted. You can generate a Write token at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)).*
-5. Configure Environment Variables in Hugging Face:
-   - On your Space page, click **Settings** tab.
-   - Scroll down to **Variables and secrets**.
-   - Click **New secret**:
-     - Key: `GROQ_API_KEY`
-     - Value: `<your-groq-api-key>`
-   - Click **New variable**:
-     - Key: `CORS_ORIGINS`
-     - Value: `*`
-6. Once the build completes (takes ~2 minutes), your backend is live!
-   - Your public backend URL will be:
-     ```
+
+#### 2. Configure Environment Variables
+1. On your new Space page, click the **Settings** tab (gear icon at the top right).
+2. Scroll to **Variables and secrets**.
+3. Click **New secret**:
+   - **Name**: `GROQ_API_KEY`
+   - **Value**: Your Groq API key (`gsk_...`)
+   - Click **Save**.
+4. Click **New variable**:
+   - **Name**: `CORS_ORIGINS`
+   - **Value**: `*`
+   - Click **Save**.
+
+#### 3. Push Code to Hugging Face
+Hugging Face Spaces are standard Git repositories.
+
+1. Get your Hugging Face Access Token:
+   - Go to [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens).
+   - Click **Create new token** → Name: `space-deploy` → Role: **Write** → Copy token (`hf_...`).
+2. In your local terminal (`c:\Projects\retail_flow`), add the Hugging Face remote and push:
+   ```powershell
+   git remote add hf https://huggingface.co/spaces/<YOUR_HF_USERNAME>/reroute-api
+   git push hf main
+   ```
+   *(When prompted: Username = your Hugging Face username, Password = your `hf_...` token).*
+
+#### 4. Verify Backend Health
+1. In Hugging Face, click the **App** tab.
+2. The space will automatically install dependencies from `requirements.txt` and launch `app.py`.
+3. In ~2 minutes, the status will turn green: **Running**.
+4. Your live backend URL is:
+   ```text
+   https://<YOUR_HF_USERNAME>-reroute-api.hf.space
+   ```
+5. Test it in your browser:
+   - Health check: `https://<YOUR_HF_USERNAME>-reroute-api.hf.space/api/health`
+   - Interactive Swagger API docs: `https://<YOUR_HF_USERNAME>-reroute-api.hf.space/api/docs`
+
+---
+
+### Step 3: Deploy Frontend on Cloudflare Pages (100% Free)
+
+#### 1. Connect Git Repository
+1. Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com/).
+2. In the left navigation, click **Compute (Workers) & Pages** → **Create application** → **Pages** tab.
+3. Click **Connect to Git** and authorize your GitHub account.
+4. Select repository: **`ashimst/reroute`**.
+5. Click **Begin setup**.
+
+#### 2. Configure Build Parameters
+Fill in the exact fields below:
+
+| Field | Value to Enter | Note |
+| :--- | :--- | :--- |
+| **Project name** | `reroute` | Yields `https://reroute.pages.dev` |
+| **Production branch** | `main` | Listens to commits |
+| **Framework preset** | `Vite` | Standard Vite preset |
+| **Root directory** | `frontend` | **MANDATORY**: React source is in `frontend/` |
+| **Build command** | `npm run build` | Compiles TypeScript & Vite bundle |
+| **Build output directory** | `dist` | Generated files |
+
+#### 3. Set Environment Variable
+1. Under **Environment variables (advanced)**, click **Add variable**:
+   - **Variable name**: `VITE_API_URL`
+   - **Value**: Your Hugging Face Space URL without trailing slash:
+     ```text
      https://<YOUR_HF_USERNAME>-reroute-api.hf.space
      ```
-   - Test it by visiting in your browser:
-     `https://<YOUR_HF_USERNAME>-reroute-api.hf.space/api/health`
-     It should respond with: `{"status":"healthy", ...}`
 
----
-
-### Option B: Render.com (Alternative Free Web Service)
-
-1. Go to [dashboard.render.com](https://dashboard.render.com) and click **New +** → **Web Service**.
-2. Connect your GitHub repository: `ashimst/reroute`.
-3. Configure the service:
-   - **Name**: `reroute-api`
-   - **Language**: `Docker`
-   - **Branch**: `main`
-   - **Region**: Choose closest to you (e.g., Singapore, Frankfurt, or Oregon)
-   - **Instance Type**: `Free`
-4. Expand **Advanced** → **Add Environment Variable**:
-   - `GROQ_API_KEY`: `<your-groq-api-key>`
-   - `CORS_ORIGINS`: `*`
-   - `PORT`: `10000`
-5. Click **Create Web Service**.
-6. Render will automatically build the `Dockerfile`.
-   - Your public backend URL will be:
-     ```
-     https://reroute-api.onrender.com
-     ```
-   - Verify health: `https://reroute-api.onrender.com/api/health`
-
----
-
-## Part 2: Deploy Frontend on Cloudflare Pages (100% Free)
-
-Cloudflare Pages provides instant edge distribution, zero cold starts, and free SSL.
-
-### Step 1: Connect GitHub Repository
-1. Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com/).
-2. In the left navigation sidebar, click **Compute (Workers) & Pages** (or **Workers & Pages**).
-3. Click the **Create application** button.
-4. Select the **Pages** tab and click **Connect to Git**.
-5. Select your GitHub account and choose the repository: **`ashimst/reroute`**.
-6. Click **Begin setup**.
-
-### Step 2: Configure Build Settings
-Fill out the setup form with the exact settings below:
-
-| Field | Value | Notes |
-| :--- | :--- | :--- |
-| **Project name** | `reroute` | Will create `https://reroute.pages.dev` |
-| **Production branch** | `main` | Automatically triggers on new pushes |
-| **Framework preset** | `Vite` | Configures defaults |
-| **Root directory** | `frontend` | **CRITICAL**: The React app is in `frontend/` |
-| **Build command** | `npm run build` | Runs `tsc -b && vite build` |
-| **Build output directory** | `dist` | Generated static bundle |
-
-### Step 3: Add Environment Variables
-Under the **Environment variables (advanced)** section on the same page:
-1. Click **Add variable**.
-2. Set:
-   - **Variable name**: `VITE_API_URL`
-   - **Value**: Your live backend URL from Part 1, without a trailing slash:
-     - Example (Hugging Face): `https://<YOUR_HF_USERNAME>-reroute-api.hf.space`
-     - Example (Render): `https://reroute-api.onrender.com`
-
-### Step 4: Deploy
+#### 4. Save and Deploy
 1. Click **Save and Deploy**.
-2. Cloudflare Pages will clone the repository, install dependencies, run `npm run build`, and deploy the site across Cloudflare's global edge network.
-3. Once finished (~1 minute), you will see:
-   🎉 **Success! Your project is deployed at: `https://reroute.pages.dev`** (or your chosen project name).
+2. Cloudflare Pages builds and deploys your site in ~60 seconds to:
+   ```text
+   https://reroute.pages.dev
+   ```
 
 ---
 
-## Part 3: Verification & Sanity Checks
+## 4. Verification Checklist
 
-Open your deployed frontend URL (`https://reroute.pages.dev`) and verify:
-
-1. **Homepage & Landing Page**:
-   - The dark theme hero, interactive workflow pipeline, and real-time benchmark cards load cleanly.
-2. **Demo & Exception Studio (`/demo`)**:
-   - Click **Demo** in the top navigation bar.
-   - Select any order (e.g., `#e481f51cbdc54678b7cc49136f2d6af7`).
-   - Run a test return or delivery check — verify that live policy rules evaluate and results display.
-3. **Chat & Streamed Reasoning (`/chat`)**:
-   - Send an inquiry like *"I want to return my smartwatch because it arrived damaged"*.
-   - Confirm that the LangGraph reflex triaging and resolution response streams back.
-4. **SPA Client-Side Navigation**:
-   - Refresh the page directly on `https://reroute.pages.dev/demo` or `https://reroute.pages.dev/cases`.
-   - The page should reload instantly without a 404 error (handled by `frontend/public/_redirects`).
-
----
-
-## Part 4: Updating Code in the Future
-
-Whenever you want to push updates:
-```bash
-git add .
-git commit -m "your update message"
-git push origin main
-```
-- **Cloudflare Pages** will automatically detect the commit, trigger a fresh build, and deploy the new version in under 60 seconds with zero downtime.
-- If using **Hugging Face Spaces**, run `git push hf main` to redeploy the backend container.
-- If using **Render**, it will automatically rebuild upon any push to `origin main`.
-
----
-
-## Summary of Configurations Included in the Repo
-
-- `frontend/public/_redirects`: Contains `/*  /index.html  200` to prevent 404 errors on browser page reloads in Cloudflare Pages.
-- `backend/app/main.py`: Pre-configured CORS regex to automatically authorize requests from any `https://*.pages.dev` domain and custom domains.
-- `Dockerfile`: Multi-stage, low-footprint Debian container pre-bundled with FAISS, SentenceTransformers, and Olist dataset, with dynamic `$PORT` handling for any cloud container provider.
+1. **Visit Frontend**: Go to `https://reroute.pages.dev`. The UI should load with the dark obsidian theme.
+2. **Test Demo**: Click **Demo** in navbar → select any order → verify order details load instantly from the Hugging Face backend.
+3. **Test Exception Resolution**: Run an eligibility check on any order; the rules and retrieved policies should return in milliseconds.
+4. **Test Chat**: Go to `/demo?tab=chat` and send a message. Verify the LangGraph reflex triaging streams back real-time answers.
+5. **Direct Page Reload**: Refresh on `https://reroute.pages.dev/demo` — verify it reloads cleanly without a 404 (handled by `_redirects`).
