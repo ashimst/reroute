@@ -6,6 +6,24 @@ Binds natively to port 7860 with 16 GB RAM, embedding all FastAPI routes into Gr
 
 from __future__ import annotations
 
+# Hugging Face ZeroGPU requires 'spaces' to be imported before any CUDA/torch modules
+try:
+    import spaces  # pyright: ignore[reportMissingImports]
+except ImportError:
+    class spaces:  # type: ignore
+        @staticmethod
+        def GPU(fn=None, *args, **kwargs):
+            if fn:
+                return fn
+            return lambda f: f
+
+@spaces.GPU
+def _zero_gpu_warmup():
+    """Satisfies Hugging Face ZeroGPU startup AST scanner."""
+    return True
+
+_zero_gpu_warmup()
+
 import logging
 import os
 import sys
@@ -72,25 +90,6 @@ with gr.Blocks(title="REROUTE Exception Engine") as demo:
 demo.app.state.run_case = _run_case
 demo.app.state.loader = _loader
 demo.app.state.repo = _repo
-# ZeroGPU compatibility for Hugging Face Spaces (in case ZeroGPU hardware is selected)
-try:
-    import spaces  # pyright: ignore[reportMissingImports]
-except ImportError:
-    class spaces:  # type: ignore
-        @staticmethod
-        def GPU(fn=None, *args, **kwargs):
-            if fn:
-                return fn
-            return lambda f: f
-
-@spaces.GPU
-def _zero_gpu_warmup():
-    """Satisfies Hugging Face ZeroGPU startup AST scanner."""
-    return True
-
-_zero_gpu_warmup()
-log.info("ZeroGPU compatibility hook registered")
-
 demo.app.state.graph = graph
 
 # Configure CORS for custom domain (reroute.noesisframeworks.com), Cloudflare Pages, and local dev
