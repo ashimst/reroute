@@ -74,12 +74,22 @@ demo.app.state.loader = _loader
 demo.app.state.repo = _repo
 # ZeroGPU compatibility for Hugging Face Spaces (in case ZeroGPU hardware is selected)
 try:
-    import importlib
-    _spaces = importlib.import_module("spaces")
-    _spaces.GPU(lambda: True)()
-    log.info("ZeroGPU compatibility hook registered")
-except Exception:
-    pass
+    import spaces  # pyright: ignore[reportMissingImports]
+except ImportError:
+    class spaces:  # type: ignore
+        @staticmethod
+        def GPU(fn=None, *args, **kwargs):
+            if fn:
+                return fn
+            return lambda f: f
+
+@spaces.GPU
+def _zero_gpu_warmup():
+    """Satisfies Hugging Face ZeroGPU startup AST scanner."""
+    return True
+
+_zero_gpu_warmup()
+log.info("ZeroGPU compatibility hook registered")
 
 demo.app.state.graph = graph
 
