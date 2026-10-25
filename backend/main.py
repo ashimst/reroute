@@ -24,6 +24,7 @@ import logging
 import sys
 import textwrap
 from pathlib import Path
+from typing import Any
 
 # Force UTF-8 output on Windows to avoid cp1252 encode errors
 if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
@@ -53,11 +54,11 @@ _SEP = "-" * 60
 
 
 def _wrap(text: str, width: int = 70, indent: str = "  ") -> str:
-    return textwrap.fill(str(text), width=width, initial_indent=indent,
+    return textwrap.fill(text, width=width, initial_indent=indent,
                          subsequent_indent=indent)
 
 
-def print_result(state: dict) -> None:
+def print_result(state: Any) -> None:
     """Print a readable, structured summary of a completed case."""
     print()
     print(_SEP)
@@ -146,7 +147,7 @@ def print_result(state: dict) -> None:
 
 # ── Case runner ───────────────────────────────────────────────────────────────
 
-def run_single(case_id: str, order_id: str, message: str) -> dict:
+def run_single(case_id: str, order_id: str, message: str) -> Any:
     print(f"\nRunning case {case_id} ...")
     try:
         state = run_case(case_id, order_id, message)
