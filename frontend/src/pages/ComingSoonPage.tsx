@@ -23,7 +23,7 @@ export default function ComingSoonPage() {
   const [copied, setCopied] = useState(false)
 
   const dockerCommand = `# Clone the open-source repository
-git clone https://github.com/retail-flow/reroute.git
+git clone https://github.com/ashimst/reroute.git
 cd reroute
 
 # Launch full stack locally (FastAPI + React + FAISS + Centroid Router)
@@ -218,7 +218,16 @@ docker-compose up -d --build
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href="https://github.com/ashimst/reroute"
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary py-2 px-4 text-xs font-semibold flex items-center gap-1.5"
+            >
+              <GitFork className="h-3.5 w-3.5 text-[#FF5500]" />
+              <span>GitHub Repository</span>
+            </a>
             <Link to="/demo" className="btn-primary py-2 px-4 text-xs font-semibold">
               <span>Test Demo Sandbox</span>
               <ArrowRight className="h-3 w-3" />
