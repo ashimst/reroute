@@ -85,14 +85,28 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-# ── CORS — allow the Vite dev server and same-origin prod ────────────────────
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # open for local dev; restrict in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ── CORS — allow Cloudflare Pages (*.pages.dev), local dev, and custom domains ──
+import os
+
+_cors_env = os.getenv("CORS_ORIGINS", "*").strip()
+if _cors_env == "*":
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"^https?://.*",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    _origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_origins,
+        allow_origin_regex=r"^https://.*\.pages\.dev$",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # ── Routers ────────────────────────────────────────────────────────────────────
 from app.routers import analytics, auth, cases, cdn, chat, health, info, orders, workspaces  # noqa: E402

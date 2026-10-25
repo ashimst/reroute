@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: retail-flow-api
+    name: reroute-api
     env: docker
     dockerfilePath: Dockerfile
     plan: free
