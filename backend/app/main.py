@@ -99,10 +99,12 @@ if _cors_env == "*":
     )
 else:
     _origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
+    if "https://reroute.noesisframeworks.com" not in _origins:
+        _origins.append("https://reroute.noesisframeworks.com")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_origins,
-        allow_origin_regex=r"^https://.*\.pages\.dev$",
+        allow_origin_regex=r"^https?://.*",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

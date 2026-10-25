@@ -72,11 +72,30 @@ with gr.Blocks(title="REROUTE Exception Engine") as demo:
 demo.app.state.run_case = _run_case
 demo.app.state.loader = _loader
 demo.app.state.repo = _repo
+# ZeroGPU compatibility for Hugging Face Spaces (in case ZeroGPU hardware is selected)
+try:
+    import spaces
+    @spaces.GPU
+    def _zero_gpu_startup():
+        return True
+    _zero_gpu_startup()
+    log.info("ZeroGPU compatibility hook registered")
+except Exception:
+    pass
+
 demo.app.state.graph = graph
 
-# Configure CORS for Cloudflare Pages and custom domains
+# Configure CORS for custom domain (reroute.noesisframeworks.com), Cloudflare Pages, and local dev
 demo.app.add_middleware(
     CORSMiddleware,
+    allow_origins=[
+        "https://reroute.noesisframeworks.com",
+        "http://reroute.noesisframeworks.com",
+        "https://*.pages.dev",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "*",
+    ],
     allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
@@ -96,7 +115,7 @@ demo.app.include_router(workspaces.router)
 
 log.info("All API routers mounted onto Gradio app")
 
-# 4. Launch Gradio natively on port 7860
+# 4. Launch Gradio natively on port 7860 (ssr_mode=False avoids running Node.js)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
-    demo.launch(server_name="0.0.0.0", server_port=port)
+    demo.launch(server_name="0.0.0.0", server_port=port, ssr_mode=False)
