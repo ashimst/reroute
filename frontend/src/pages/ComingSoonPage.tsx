@@ -79,16 +79,51 @@ class InternalPostgresOrShopifyAdapter(BaseCommerceAdapter):
     setTimeout(() => setCopiedAdapter(false), 2000)
   }
 
+  const [mailtoGenerated, setMailtoGenerated] = useState<string>('')
+
   const handlePocSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!pocEmail || !pocEmail.includes('@')) return
+
+    const subject = encodeURIComponent(`[REROUTE VPC PoC Request] Architecture Review - ${pocCompany.trim() || 'Enterprise Brand'}`)
+    const body = encodeURIComponent(
+      `Hello Noesis Frameworks Architecture Team,\n\n` +
+      `We would like to request an Enterprise Private Cloud / VPC Architecture Review & Custom PoC for REROUTE.\n\n` +
+      `Company / Brand: ${pocCompany.trim()}\n` +
+      `Monthly Order Volume: ${pocOrders}\n` +
+      `Contact Email: ${pocEmail.trim()}\n\n` +
+      `Key Interests:\n` +
+      `- Zero Data Egress VPC Deployment (AWS / GCP / Azure)\n` +
+      `- Custom Cactus Needle Deterministic Financial Tools\n` +
+      `- ERP / WMS / Helpdesk Connector Integration\n\n` +
+      `Best regards,\n${pocEmail.trim()}\n`
+    )
+    const mailtoUrl = `mailto:contact@noesisframeworks.com?subject=${subject}&body=${body}`
+    setMailtoGenerated(mailtoUrl)
+
     try {
       const pocs = JSON.parse(localStorage.getItem('reroute_poc_requests') || '[]')
       pocs.push({ email: pocEmail, company: pocCompany, orders: pocOrders, timestamp: new Date().toISOString() })
       localStorage.setItem('reroute_poc_requests', JSON.stringify(pocs))
+
+      // Also attempt Web3Forms background dispatch if configured or online
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_key: 'REROUTE-VPC-POC-REQUEST',
+          email: pocEmail,
+          company: pocCompany,
+          volume: pocOrders,
+          source: 'https://reroute.noesisframeworks.com/deploy',
+        }),
+      }).catch(() => {})
     } catch {
       // ignore
     }
+
+    // Trigger user's mail client with prefilled details
+    window.location.href = mailtoUrl
     setPocSubmitted(true)
   }
 
@@ -269,12 +304,29 @@ class InternalPostgresOrShopifyAdapter(BaseCommerceAdapter):
           {/* Contact / Consultation Form */}
           <div className="border-t border-stone-200 dark:border-stone-800 pt-4">
             {pocSubmitted ? (
-              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-500/30 p-5 text-center space-y-2">
+              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-500/30 p-5 text-center space-y-3">
                 <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto" />
-                <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">Architecture Request Received</h4>
+                <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">Architecture Request Dispatched</h4>
                 <p className="text-xs text-stone-600 dark:text-stone-400">
-                  Our systems architect will contact <strong className="text-stone-900 dark:text-white">{pocEmail}</strong> within 1 business day for an initial VPC design review.
+                  A pre-filled consultation request has been prepared for <strong className="text-stone-900 dark:text-white">{pocEmail}</strong> ({pocCompany || 'Enterprise'} &bull; {pocOrders}).
                 </p>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                  {mailtoGenerated && (
+                    <a
+                      href={mailtoGenerated}
+                      className="btn-primary py-2 px-3 text-xs font-semibold flex items-center gap-1.5"
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      <span>Open Pre-Filled Email</span>
+                    </a>
+                  )}
+                  <a
+                    href="mailto:contact@noesisframeworks.com"
+                    className="btn-secondary py-2 px-3 text-xs font-semibold flex items-center gap-1.5"
+                  >
+                    <span>contact@noesisframeworks.com</span>
+                  </a>
+                </div>
               </div>
             ) : (
               <form onSubmit={handlePocSubmit} className="space-y-3">

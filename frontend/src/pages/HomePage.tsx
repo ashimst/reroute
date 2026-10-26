@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { fetchHealth, fetchExamples } from '../lib/api'
 import {
   ArrowRight,
   Bot,
@@ -33,6 +34,14 @@ import { cn } from '../lib/utils'
 
 export default function HomePage() {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    // Hugging Face Space cold-start handling:
+    // Free HF Spaces sleep after inactivity. Fire silent warm-up calls on initial landing page visit
+    // so the container, 99k Olist dataset, and embeddings are awake before user launches the studio.
+    fetchHealth().catch(() => {})
+    fetchExamples().catch(() => {})
+  }, [])
 
   return (
     <div className="space-y-24 py-6 md:py-12">
