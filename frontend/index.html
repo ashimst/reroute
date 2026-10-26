@@ -3,8 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>REROUTE • by Noesis</title>
-    <meta name="description" content="Retail Flow exception routing and resolution engine. Route customer order complaints through LangGraph, policy RAG, and deterministic tools." />
+    <title>REROUTE • by Noesis | Autonomous Retail Exception Engine</title>
+    
+    <!-- Meta tags for Search Engines -->
+    <meta name="description" content="REROUTE is an autonomous e-commerce exception resolution engine. Combines fast deterministic System 1 reflex triaging with System 2 Groq LLM reasoning using LangGraph, FAISS policy RAG, and Cactus Needle tools across 99k+ real Olist orders." />
+    <meta name="keywords" content="Retail Flow, Exception Routing, Autonomous Support, LangGraph, Retail Intelligence, Noesis Frameworks, E-Commerce Exception Resolution, Policy RAG, Customer Support Automation, Cactus Needle" />
+    <meta name="author" content="Noesis Frameworks" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://reroute.noesisframeworks.com/" />
+    <meta name="theme-color" content="#090d16" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://reroute.noesisframeworks.com/" />
+    <meta property="og:title" content="REROUTE • Dual-Process Retail Exception Routing Engine" />
+    <meta property="og:description" content="Autonomous e-commerce exception resolution engine powered by LangGraph, semantic policy retrieval, deterministic Cactus Needle checks, and Groq LLM fallback." />
+    <meta property="og:image" content="https://reroute.noesisframeworks.com/favicon.svg" />
+    <meta property="og:site_name" content="REROUTE by Noesis" />
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:url" content="https://reroute.noesisframeworks.com/" />
+    <meta name="twitter:title" content="REROUTE • Autonomous Retail Exception Routing Engine" />
+    <meta name="twitter:description" content="Dual-process cognitive exception resolution engine with LangGraph, policy RAG, and Groq LLM reasoning." />
+    <meta name="twitter:image" content="https://reroute.noesisframeworks.com/favicon.svg" />
 
     <!-- Favicon matching Navbar logo (Noesis #FF5500 with GitFork icon) -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -12,9 +34,68 @@
     <!-- Preconnect to Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- JSON-LD Structured Data for Crawlers & Rich Search Results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "REROUTE",
+      "alternateName": "Retail Flow Exception Engine",
+      "url": "https://reroute.noesisframeworks.com/",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "All",
+      "description": "Autonomous retail customer exception routing and resolution engine combining deterministic System 1 triage with System 2 LLM deliberation on real Olist e-commerce dataset.",
+      "creator": {
+        "@type": "Organization",
+        "name": "Noesis Frameworks",
+        "url": "https://noesisframeworks.com"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="bg-[#090d16] text-[#e2e8f0]">
+    <div id="root">
+      <!-- Semantic crawlable fallback for search bots and non-JS clients. React replaces this instantly upon mounting. -->
+      <main style="max-width: 800px; margin: 40px auto; padding: 20px; font-family: system-ui, -apple-system, sans-serif;">
+        <header style="margin-bottom: 30px;">
+          <h1 style="color: #ff5500; font-size: 2rem; margin-bottom: 10px;">⚡ REROUTE • Dual-Process Retail Exception Routing Engine</h1>
+          <p style="font-size: 1.1rem; line-height: 1.6; color: #94a3b8;">
+            Autonomous e-commerce exception resolution engine designed with Noesis Frameworks architecture.
+            Combines fast deterministic reflex triaging (System 1) with deliberative LLM reasoning (System 2) across 99,441 real Olist transactions.
+          </p>
+        </header>
+
+        <section style="margin-bottom: 24px;">
+          <h2 style="color: #f8fafc; font-size: 1.3rem;">Core Architecture & Pipeline</h2>
+          <ul style="line-height: 1.8; color: #cbd5e1;">
+            <li><strong>OpenJEV Probabilistic Routing:</strong> Categorizes customer intent (Returns, Delivery, Payment) with confidence scoring.</li>
+            <li><strong>LangGraph State Machine:</strong> Deterministic DAG routing through compliance rules and escalation policies.</li>
+            <li><strong>Policy RAG (FAISS + MiniLM):</strong> Millisecond semantic retrieval against return windows, carrier SLA, and refund regulations.</li>
+            <li><strong>Cactus Needle Tool Execution:</strong> High-precision deterministic calculation of eligibility, refund amounts, and delivery timelines.</li>
+            <li><strong>Groq LLM Deliberation:</strong> Zero-shot fallback reasoning when edge cases breach confidence thresholds.</li>
+          </ul>
+        </section>
+
+        <nav style="display: flex; gap: 16px; margin-top: 30px;">
+          <a href="/demo" style="color: #ff5500; text-decoration: underline;">Launch Interactive Demo Sandbox</a>
+          <a href="/info" style="color: #38bdf8; text-decoration: underline;">System Architecture & Dataset Specs</a>
+          <a href="/deploy" style="color: #a78bfa; text-decoration: underline;">Open Source Deployment Guide</a>
+        </nav>
+      </main>
+    </div>
+
+    <noscript>
+      <div style="background: #1e293b; color: #f8fafc; padding: 16px; text-align: center; border-bottom: 1px solid #334155;">
+        JavaScript is required to run the real-time interactive REROUTE engine demo. Please enable JavaScript in your browser.
+      </div>
+    </noscript>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
