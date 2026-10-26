@@ -117,9 +117,13 @@ def receive_case(state: CaseState) -> CaseState:
     new_state["errors"] = errors
 
     # Initialize simulation contextvars for this thread
+    days_offset = new_state.get("simulated_days_post_delivery")
+    if days_offset is None:
+        days_offset = 4  # Default to 4 days post-milestone in workflow sandbox
+
     from src.tools.time_anchor import set_simulation_context
     set_simulation_context(
-        simulated_days=new_state.get("simulated_days_post_delivery"),
+        simulated_days=days_offset,
         simulated_eval_date=new_state.get("simulated_evaluation_date"),
         confidence_threshold=new_state.get("confidence_threshold"),
     )
@@ -128,7 +132,7 @@ def receive_case(state: CaseState) -> CaseState:
         "[receive_case] case_id=%s  order_id=%s  days_offset=%s  threshold=%s",
         new_state.get("case_id"),
         order_id,
-        new_state.get("simulated_days_post_delivery"),
+        days_offset,
         new_state.get("confidence_threshold"),
     )
     return new_state
@@ -383,7 +387,7 @@ def _evaluate_result(
 # ── Build the graph ───────────────────────────────────────────────────────────
 
 def build_graph() -> StateGraph:
-    g = StateGraph(CaseState)
+    g: StateGraph = StateGraph(cast(Any, CaseState))
 
     # Nodes
     g.add_node("receive_case", receive_case)

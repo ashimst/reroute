@@ -70,6 +70,10 @@ def get_order_evaluation_context(
     """
     Compute the relative evaluation anchor for an order.
 
+    If simulation context or explicit_days_offset is provided, calculates
+    evaluation date anchored relative to the order milestone.
+    Otherwise, evaluates against real wall-clock datetime.now() for historical testing.
+
     Returns:
         (evaluation_datetime, days_since_delivery_or_purchase, delivery_date_iso)
     """
@@ -78,31 +82,45 @@ def get_order_evaluation_context(
     if forced_date:
         return forced_date, 0, None
 
-    # 2. Determine offset: explicit argument > contextvar > default 4 days
+    # 2. Determine offset: explicit argument > contextvar
     offset = explicit_days_offset
     if offset is None:
         offset = _simulated_days_var.get()
-    if offset is None:
-        offset = 4  # Default: claim submitted 4 days post-milestone
 
     # 3. Retrieve order timeline
     delivery = get_delivery_status(order_id)
     if delivery is None:
         eval_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        return eval_dt, offset, None
+        return eval_dt, offset if offset is not None else 0, None
 
     delivery_iso = delivery.get("delivery_date")
     delivery_dt = _parse_iso(delivery_iso)
 
+    # 4. If simulated offset is active, anchor relative to milestone
+    if offset is not None:
+        if delivery_dt is not None:
+            eval_dt = delivery_dt + timedelta(days=offset)
+            return eval_dt, offset, delivery_iso
+
+        purchase_iso = delivery.get("purchase_date")
+        purchase_dt = _parse_iso(purchase_iso)
+        if purchase_dt is not None:
+            eval_dt = purchase_dt + timedelta(days=offset)
+            return eval_dt, offset, None
+
+        eval_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        return eval_dt, offset, None
+
+    # 5. Fallback for raw historical evaluation (e.g. non-simulated unit tests)
+    now = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     if delivery_dt is not None:
-        eval_dt = delivery_dt + timedelta(days=offset)
-        return eval_dt, offset, delivery_iso
+        actual_days = max(0, (now - delivery_dt).days)
+        return now, actual_days, delivery_iso
 
     purchase_iso = delivery.get("purchase_date")
     purchase_dt = _parse_iso(purchase_iso)
     if purchase_dt is not None:
-        eval_dt = purchase_dt + timedelta(days=offset)
-        return eval_dt, offset, None
+        actual_days = max(0, (now - purchase_dt).days)
+        return now, actual_days, None
 
-    eval_dt = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    return eval_dt, offset, None
+    return now, 0, None
