@@ -3,8 +3,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '../lib/utils'
 import { EngineStatus } from './EngineStatus'
-import { useAuth } from '../context/AuthContext'
-import AuthModal from './AuthModal'
 import {
   GitFork,
   ExternalLink,
@@ -12,25 +10,18 @@ import {
   Moon,
   Zap,
   Sparkles,
-  User,
-  LogOut,
-  ChevronDown,
-  ShieldCheck,
-  ShieldAlert,
 } from 'lucide-react'
 
 const NAV = [
-  { to: '/',        label: 'Overview' },
-  { to: '/demo',    label: 'Demo Sandbox' },
-  { to: '/info',    label: 'Architecture & Pipeline' },
-  { to: '/deploy',  label: 'Cloud Deployment' },
+  { to: '/',                  label: 'Overview' },
+  { to: '/demo?tab=studio',   label: 'Exception Studio' },
+  { to: '/info',              label: 'Architecture & Pipeline' },
+  { to: '/deploy',            label: 'Self-Host & Enterprise' },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { pathname } = useLocation()
-  const { user, logout, upgrade, resetUsage, setUser } = useAuth()
-  const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const { pathname, search } = useLocation()
+  const currentFull = `${pathname}${search}`
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
@@ -73,7 +64,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Navigation Items with Animated Active Pill */}
           <nav className="flex items-center gap-1 overflow-x-auto">
             {NAV.map(({ to, label }) => {
-              const active = pathname === to || (to === '/demo' && ['/submit', '/orders', '/history'].includes(pathname))
+              const active = pathname === to || currentFull === to || (to.startsWith('/demo') && pathname === '/demo')
               return (
                 <Link
                   key={to}
@@ -177,13 +168,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
-
-      {/* Global Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onSuccess={(u) => setUser(u)}
-      />
     </div>
   )
 }

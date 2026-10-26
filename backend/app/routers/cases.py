@@ -88,6 +88,11 @@ def _build_response(state: dict) -> CaseResponse:
         confidence=float(state.get("confidence", 0.0)),
         groq_used=bool(state.get("groq_used", False)),
         groq_result=groq_model,
+        execution_path=state.get("execution_path") or ("system_2_deliberation" if state.get("groq_used") else "system_1_reflex"),
+        latency_ms=state.get("latency_ms"),
+        estimated_cost_usd=state.get("estimated_cost_usd", 0.0),
+        evaluation_reference_date=state.get("evaluation_reference_date"),
+        days_since_delivery=state.get("days_since_delivery"),
         tools_executed=list(state.get("tools_executed") or []),
         applicable_rules=list(state.get("applicable_rules") or []),
         retrieved_policies=policies,
@@ -104,21 +109,17 @@ async def submit_case(body: CaseRequest, request: Request):
     - Retrieves relevant policy via FAISS semantic search
     - Executes deterministic tools via Cactus Needle
     - Falls back to Groq if confidence is below threshold
+    - Applies Relative Time-Anchoring for historical Olist dataset
     """
     from src.graph.workflow import run_case as _default_run_case
     run_case = getattr(request.app.state, "run_case", None) or _default_run_case
 
     case_id = body.case_id or f"WEB-{uuid.uuid4().hex[:8].upper()}"
 
-    # Return request quota enforcement for Free Tier accounts
-    is_return_issue = any(k in body.customer_message.lower() for k in ["return", "refund", "damaged", "broken", "defective", "smashed"])
-    if is_return_issue:
-        from app.routers.auth import get_current_user_optional, check_and_increment_return_quota
-        auth_header = request.headers.get("authorization")
-        user = get_current_user_optional(auth_header)
-        quota = check_and_increment_return_quota(user)
-        if not quota["allowed"]:
-            raise HTTPException(status_code=429, detail=quota["message"])
+    # Set optional BYOK Groq API key in environment if provided in request
+    if body.groq_api_key:
+        import os
+        os.environ["GROQ_API_KEY"] = body.groq_api_key.strip()
 
     try:
         state = await asyncio.to_thread(
@@ -126,6 +127,10 @@ async def submit_case(body: CaseRequest, request: Request):
             case_id,
             body.order_id.strip(),
             body.customer_message.strip(),
+            None,
+            body.simulated_days_post_delivery,
+            None,
+            body.confidence_threshold,
         )
     except Exception as exc:
         log.exception("run_case failed for order_id=%s", body.order_id)

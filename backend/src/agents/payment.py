@@ -40,27 +40,15 @@ _needle_agent = needle.Needle(
 )
 
 
-def run(order_id: str, customer_message: str) -> dict:
+def run(order_id: str, customer_message: str, simulated_days: Optional[int] = None) -> dict:
     """
     Execute the payment workflow for an order.
-
-    Returns:
-        {
-            "agent":           "payment",
-            "order_id":        str,
-            "policies":        list[dict],
-            "tool_results":    dict,
-            "resolution":      str,
-            "resolution_detail": str,
-            "escalate":        bool,
-            "escalate_reason": str | None,
-            "confidence":      float,
-            "needs_groq":      bool,
-            "tools_executed":  list[str],
-            "applicable_rules": list[str],
-        }
     """
-    log.info("[Payment Agent] order_id=%s", order_id)
+    from src.tools.time_anchor import set_simulation_context
+    if simulated_days is not None:
+        set_simulation_context(simulated_days=simulated_days)
+
+    log.info("[Payment Agent] order_id=%s simulated_days=%s", order_id, simulated_days)
     tools_executed: list[str] = []
     applicable_rules: list[str] = []
     tool_results: dict[str, Any] = {}

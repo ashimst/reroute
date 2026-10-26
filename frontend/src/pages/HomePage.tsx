@@ -30,23 +30,9 @@ import {
   Zap,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
-import AuthModal from '../components/AuthModal'
-import { type UserProfile } from '../lib/api'
 
-interface HomePageProps {
-  currentUser: UserProfile | null
-  onAuthSuccess: (user: UserProfile) => void
-}
-
-export default function HomePage({ currentUser, onAuthSuccess }: HomePageProps) {
+export default function HomePage() {
   const navigate = useNavigate()
-  const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [authDefaultTab, setAuthDefaultTab] = useState<'login' | 'register'>('login')
-
-  const openAuth = (tab: 'login' | 'register') => {
-    setAuthDefaultTab(tab)
-    setAuthModalOpen(true)
-  }
 
   return (
     <div className="space-y-24 py-6 md:py-12">
@@ -55,14 +41,16 @@ export default function HomePage({ currentUser, onAuthSuccess }: HomePageProps) 
         {/* Glow ambient background in obsidian mode */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-tr from-[#FF5500]/10 via-amber-500/5 to-transparent blur-3xl -z-10 pointer-events-none rounded-full" />
 
-        {/* Narrative Pill */}
+        {/* Narrative Super-heading Badge */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#DCDCD4] dark:border-[#262930] bg-white/80 dark:bg-[#131519]/80 backdrop-blur text-xs font-mono text-stone-600 dark:text-stone-300 shadow-sm"
         >
           <span className="flex h-2 w-2 rounded-full bg-[#FF5500] animate-pulse" />
-          <span className="font-semibold text-stone-900 dark:text-white uppercase tracking-wider text-[10px]">Dual-Process Cognitive Architecture</span>
+          <span className="font-semibold text-stone-900 dark:text-white uppercase tracking-wider text-[10px]">
+            NOESIS FRAMEWORKS &bull; OPEN-SOURCE REFERENCE ARCHITECTURE
+          </span>
           <span className="text-stone-300 dark:text-stone-700">&bull;</span>
           <a
             href="https://noesisframeworks.com"
@@ -70,12 +58,12 @@ export default function HomePage({ currentUser, onAuthSuccess }: HomePageProps) 
             rel="noopener noreferrer"
             className="hover:text-[#FF5500] flex items-center gap-1 transition-colors text-[11px]"
           >
-            <span>Powered by Noesis Frameworks</span>
+            <span>noesisframeworks.com</span>
             <ExternalLink className="h-3 w-3" />
           </a>
         </motion.div>
 
-        {/* Hero Title */}
+        {/* Hero Title & Sub-headline */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -83,11 +71,10 @@ export default function HomePage({ currentUser, onAuthSuccess }: HomePageProps) 
           className="space-y-4"
         >
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-[#0B0C0E] dark:text-[#F4F4F0] leading-[1.1] max-w-4xl mx-auto">
-            Autonomous Retail Exception Engine for High-Velocity Stores
+            Autonomous Retail Exception Routing. Deterministic First. LLM Second.
           </h1>
-          <p className="text-base sm:text-xl text-stone-600 dark:text-stone-300 max-w-2xl mx-auto font-normal leading-relaxed">
-            Resolve 70%+ of customer returns, late deliveries, and payment disputes deterministically in{' '}
-            <strong className="font-semibold text-[#FF5500]">&lt;2ms at $0.00 token cost</strong>. Escalate ambiguous claims to grounded LLM deliberation with full policy citations.
+          <p className="text-base sm:text-lg text-stone-600 dark:text-stone-300 max-w-3xl mx-auto font-normal leading-relaxed">
+            Stop letting generative AI hallucinate refund math. REROUTE resolves 80%+ of returns, delivery claims, and SLA exceptions in <strong className="font-semibold text-[#FF5500]">&lt;50ms at $0 LLM cost</strong> using deterministic tool execution (System 1)—falling back to Groq LLM reasoning (System 2) only on ambiguous edge cases.
           </p>
         </motion.div>
 
@@ -99,27 +86,26 @@ export default function HomePage({ currentUser, onAuthSuccess }: HomePageProps) 
           className="flex flex-wrap items-center justify-center gap-3 pt-2"
         >
           <Link
-            to="/demo"
+            to="/demo?tab=studio"
             className="btn-primary py-3 px-6 text-sm font-semibold rounded-xl shadow-lg shadow-orange-500/20 flex items-center gap-2 group"
           >
             <Play className="h-4 w-4 fill-white" />
-            <span>Launch Live Demo Sandbox</span>
-            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
-
-          <Link
-            to="/deploy"
-            className="btn-secondary py-3 px-6 text-sm font-semibold rounded-xl flex items-center gap-2 border-[#DCDCD4] dark:border-[#262930]"
-          >
-            <Cloud className="h-4 w-4 text-[#FF5500]" />
-            <span>Cloud Deployment Roadmap</span>
+            <span>Launch Live Exception Studio &rarr;</span>
           </Link>
 
           <Link
             to="/info"
-            className="btn-ghost py-3 px-4 text-xs font-mono text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white"
+            className="btn-secondary py-3 px-5 text-sm font-semibold rounded-xl flex items-center gap-2 border-[#DCDCD4] dark:border-[#262930]"
           >
-            Read System 1 &amp; 2 Specs &rarr;
+            <Database className="h-4 w-4 text-[#FF5500]" />
+            <span>Explore Architecture &amp; 99k Dataset &rarr;</span>
+          </Link>
+
+          <Link
+            to="/deploy"
+            className="btn-ghost py-3 px-4 text-xs font-mono text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white"
+          >
+            Self-Host / VPC Deploy &rarr;
           </Link>
         </motion.div>
 
@@ -414,17 +400,6 @@ export default function HomePage({ currentUser, onAuthSuccess }: HomePageProps) 
           </Link>
         </div>
       </section>
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onSuccess={(u) => {
-          onAuthSuccess(u)
-          navigate('/deploy')
-        }}
-        defaultTab={authDefaultTab}
-      />
     </div>
   )
 }

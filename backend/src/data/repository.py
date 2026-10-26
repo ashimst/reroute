@@ -167,7 +167,13 @@ def get_delivery_status(order_id: str) -> Optional[dict]:
     if order is None:
         return None
 
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    try:
+        from src.tools.time_anchor import _simulated_days_var, _simulated_eval_date_var
+        sim_eval_dt = _simulated_eval_date_var.get()
+        sim_days = _simulated_days_var.get()
+    except Exception:
+        sim_eval_dt = None
+        sim_days = None
 
     purchase_date      = _parse_iso(order.get("order_purchase_timestamp"))
     ship_date          = _parse_iso(order.get("order_delivered_carrier_date"))
@@ -178,13 +184,21 @@ def get_delivery_status(order_id: str) -> Optional[dict]:
     is_late = False
     days_late = 0
 
+    if sim_eval_dt:
+        eval_dt = sim_eval_dt
+    else:
+        from datetime import timedelta
+        offset = sim_days if sim_days is not None else 4
+        base = delivery_date or ship_date or purchase_date or estimated_delivery
+        eval_dt = (base + timedelta(days=offset)) if base else datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
     if estimated_delivery:
-        reference = delivery_date if is_delivered else today
+        reference = delivery_date if is_delivered else eval_dt
         if reference > estimated_delivery:
             is_late = True
             days_late = (reference - estimated_delivery).days
 
-    days_since_purchase = (today - purchase_date).days if purchase_date else None
+    days_since_purchase = (eval_dt - purchase_date).days if purchase_date else None
 
     return {
         "order_id": order_id,

@@ -26,7 +26,7 @@ function AppRoutes() {
     <Layout>
       <Routes>
         {/* Dedicated Product Homepage */}
-        <Route path="/" element={<HomePage currentUser={user} onAuthSuccess={setUser} />} />
+        <Route path="/" element={<HomePage />} />
 
         {/* All-in-One Demo Sandbox */}
         <Route path="/demo" element={<DemoPage />} />
@@ -40,9 +40,11 @@ function AppRoutes() {
         {/* Cognitive Architecture & Specs */}
         <Route path="/info" element={<InfoPage />} />
 
-        {/* Cloud Deployment (Coming Soon) & Internal Workspace Code Preserved */}
+        {/* Self-Host & Enterprise VPC Deployment */}
         <Route path="/deploy" element={<ComingSoonPage />} />
-        <Route path="/workspace" element={<WorkspacePage />} />
+        
+        {/* Redirect legacy workspace to Studio with engine tuning */}
+        <Route path="/workspace" element={<Navigate to="/demo?tab=studio" replace />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

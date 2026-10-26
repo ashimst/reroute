@@ -25,8 +25,15 @@ Graph topology:
 from __future__ import annotations
 
 import logging
+import sys
 import uuid
+from pathlib import Path
 from typing import Any, Literal, Optional
+
+# Ensure backend root is on sys.path for consistent src.* resolution
+_backend_dir = Path(__file__).resolve().parent.parent.parent
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
 
 from typing_extensions import TypedDict
 
@@ -42,6 +49,9 @@ class CaseState(TypedDict, total=False):
     case_id: str
     order_id: str
     customer_message: str
+    simulated_days_post_delivery: Optional[int]
+    simulated_evaluation_date: Optional[str]
+    confidence_threshold: Optional[float]
 
     # Routing
     route: str                         # "returns" | "delivery" | "payment"
@@ -77,6 +87,13 @@ class CaseState(TypedDict, total=False):
     confidence: float
     groq_used: bool
 
+    # Telemetry & Time-Anchoring
+    evaluation_reference_date: Optional[str]
+    days_since_delivery: Optional[int]
+    execution_path: Optional[str]       # "system_1_reflex" | "system_2_deliberation"
+    latency_ms: Optional[float]
+    estimated_cost_usd: Optional[float]
+
     # Errors
     errors: list[str]
 
@@ -100,11 +117,21 @@ def receive_case(state: CaseState) -> CaseState:
         errors.append("customer_message is required.")
 
     new_state["errors"] = errors
+
+    # Initialize simulation contextvars for this thread
+    from src.tools.time_anchor import set_simulation_context
+    set_simulation_context(
+        simulated_days=new_state.get("simulated_days_post_delivery"),
+        simulated_eval_date=new_state.get("simulated_evaluation_date"),
+        confidence_threshold=new_state.get("confidence_threshold"),
+    )
+
     log.info(
-        "[receive_case] case_id=%s  order_id=%s  message=%s…",
+        "[receive_case] case_id=%s  order_id=%s  days_offset=%s  threshold=%s",
         new_state.get("case_id"),
         order_id,
-        customer_message[:60],
+        new_state.get("simulated_days_post_delivery"),
+        new_state.get("confidence_threshold"),
     )
     return new_state
 
@@ -120,10 +147,17 @@ def jev_router(state: CaseState) -> CaseState:
     customer_message = state["customer_message"]
     result = jev_route(customer_message)
 
+    # Dynamic thresholding: if custom threshold passed, use it
+    configured_threshold = state.get("confidence_threshold")
+    threshold = configured_threshold if configured_threshold is not None else ROUTING_CONFIDENCE_THRESHOLD
+    if result["confidence"] < threshold:
+        result["use_groq_fallback"] = True
+
     log.info(
-        "[jev_router] route=%s  confidence=%.2f  backend=%s  groq_needed=%s",
+        "[jev_router] route=%s  confidence=%.2f (threshold=%.2f) backend=%s  groq_needed=%s",
         result["route"],
         result["confidence"],
+        threshold,
         result["backend_used"],
         result["use_groq_fallback"],
     )
@@ -155,19 +189,31 @@ def jev_router(state: CaseState) -> CaseState:
 
 def returns_agent(state: CaseState) -> CaseState:
     from src.agents import returns
-    result = returns.run(state["order_id"], state["customer_message"])
+    result = returns.run(
+        state["order_id"],
+        state["customer_message"],
+        simulated_days=state.get("simulated_days_post_delivery"),
+    )
     return _merge_agent_result(state, result)
 
 
 def delivery_agent(state: CaseState) -> CaseState:
     from src.agents import delivery
-    result = delivery.run(state["order_id"], state["customer_message"])
+    result = delivery.run(
+        state["order_id"],
+        state["customer_message"],
+        simulated_days=state.get("simulated_days_post_delivery"),
+    )
     return _merge_agent_result(state, result)
 
 
 def payment_agent(state: CaseState) -> CaseState:
     from src.agents import payment
-    result = payment.run(state["order_id"], state["customer_message"])
+    result = payment.run(
+        state["order_id"],
+        state["customer_message"],
+        simulated_days=state.get("simulated_days_post_delivery"),
+    )
     return _merge_agent_result(state, result)
 
 
@@ -229,14 +275,30 @@ def groq_fallback_node(state: CaseState) -> CaseState:
 
 
 def resolve(state: CaseState) -> CaseState:
-    """Merge agent + optional Groq results into the final resolution."""
+    """Merge agent + optional Groq results into the final resolution with time-anchoring telemetry."""
+    from src.tools.time_anchor import get_order_evaluation_context
+    order_id = state.get("order_id", "")
+    offset = state.get("simulated_days_post_delivery")
+    eval_dt, days_since_delivery, _ = get_order_evaluation_context(order_id, offset)
+
     groq_result = state.get("groq_result")
     agent_escalate = state.get("agent_escalate", False)
     errors = state.get("errors") or []
+    groq_used = bool(state.get("groq_used", False))
+    execution_path = "system_2_deliberation" if groq_used else "system_1_reflex"
+    estimated_cost = 0.0008 if groq_used else 0.0000
+
+    base_telemetry = {
+        "evaluation_reference_date": eval_dt.date().isoformat(),
+        "days_since_delivery": days_since_delivery,
+        "execution_path": execution_path,
+        "estimated_cost_usd": estimated_cost,
+    }
 
     if errors:
         return {
             **state,
+            **base_telemetry,
             "resolution": "error",
             "resolution_detail": "; ".join(errors),
             "escalate": True,
@@ -268,6 +330,7 @@ def resolve(state: CaseState) -> CaseState:
 
         return {
             **state,
+            **base_telemetry,
             "resolution": resolution,
             "resolution_detail": detail,
             "escalate": escalate,
@@ -278,6 +341,7 @@ def resolve(state: CaseState) -> CaseState:
     # No Groq – use agent result directly
     return {
         **state,
+        **base_telemetry,
         "resolution": state.get("agent_resolution", "unknown"),
         "resolution_detail": state.get("agent_resolution_detail", ""),
         "escalate": agent_escalate,
@@ -303,6 +367,7 @@ def _evaluate_result(
     state: CaseState,
 ) -> Literal["groq_fallback_node", "resolve"]:
     from src.config import RESOLUTION_CONFIDENCE_THRESHOLD
+    from src.tools.time_anchor import get_configured_confidence_threshold
 
     # If the agent already determined escalation (e.g. data error, missing order), resolve immediately
     if state.get("agent_escalate"):
@@ -311,10 +376,16 @@ def _evaluate_result(
     agent_confidence = state.get("agent_confidence", 0.0)
     needs_groq = state.get("agent_needs_groq", False)
 
-    if needs_groq or agent_confidence < RESOLUTION_CONFIDENCE_THRESHOLD:
+    threshold = (
+        state.get("confidence_threshold")
+        or get_configured_confidence_threshold()
+        or RESOLUTION_CONFIDENCE_THRESHOLD
+    )
+
+    if needs_groq or agent_confidence < threshold:
         log.info(
             "[evaluate_result] Confidence=%.2f < threshold=%.2f → Groq fallback",
-            agent_confidence, RESOLUTION_CONFIDENCE_THRESHOLD,
+            agent_confidence, threshold,
         )
         return "groq_fallback_node"
 
@@ -384,28 +455,49 @@ def build_compiled_graph():
 
 # ── Convenience runner ────────────────────────────────────────────────────────
 
-def run_case(case_id: str, order_id: str, customer_message: str, app=None) -> CaseState:
+def run_case(
+    case_id: str,
+    order_id: str,
+    customer_message: str,
+    app=None,
+    simulated_days_post_delivery: Optional[int] = None,
+    simulated_evaluation_date: Optional[str] = None,
+    confidence_threshold: Optional[float] = None,
+) -> CaseState:
     """
     Execute a complete case through the graph and return the final state.
 
     Args:
-        case_id:          unique identifier for this exception case
-        order_id:         Olist order ID
-        customer_message: raw customer complaint / request
-        app:              optional pre-compiled LangGraph application instance
+        case_id:                      unique identifier for this exception case
+        order_id:                     Olist order ID
+        customer_message:             raw customer complaint / request
+        app:                          optional pre-compiled LangGraph application instance
+        simulated_days_post_delivery: relative days offset from delivery date (default 4)
+        simulated_evaluation_date:    optional explicit ISO date override
+        confidence_threshold:         custom System 1 confidence threshold (0.50 - 0.95)
 
     Returns:
-        Final CaseState dict with all fields populated.
+        Final CaseState dict with all fields and telemetry populated.
     """
+    import time
+    start_time = time.perf_counter()
+
     graph = app or get_compiled_graph()
     initial_state: CaseState = {
         "case_id": case_id,
         "order_id": order_id,
         "customer_message": customer_message,
+        "simulated_days_post_delivery": simulated_days_post_delivery,
+        "simulated_evaluation_date": simulated_evaluation_date,
+        "confidence_threshold": confidence_threshold,
         "errors": [],
         "groq_used": False,
         "groq_result": None,
     }
     final_state = graph.invoke(initial_state)
+
+    elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+    final_state["latency_ms"] = round(elapsed_ms, 2)
     return final_state
+
 

@@ -57,6 +57,11 @@ export interface CaseResponse {
   confidence: number
   groq_used: boolean
   groq_result?: GroqResult
+  execution_path?: 'system_1_reflex' | 'system_2_deliberation'
+  latency_ms?: number
+  estimated_cost_usd?: number
+  evaluation_reference_date?: string
+  days_since_delivery?: number
   tools_executed: string[]
   applicable_rules: string[]
   retrieved_policies: PolicyHit[]
@@ -67,6 +72,9 @@ export interface CaseRequest {
   case_id?: string
   order_id: string
   customer_message: string
+  simulated_days_post_delivery?: number
+  confidence_threshold?: number
+  groq_api_key?: string
 }
 
 export interface ExampleCase {
@@ -76,6 +84,8 @@ export interface ExampleCase {
   scenario: string
   expected_route: string
   notes: string
+  simulated_days_post_delivery?: number
+  expected_outcome?: string
 }
 
 export interface OrderItem {

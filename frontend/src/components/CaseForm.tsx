@@ -16,6 +16,8 @@ export default function CaseForm({ onSubmit, isLoading, initialOrderId, initialM
   const [orderId, setOrderId] = useState(initialOrderId || '')
   const [message, setMessage] = useState(initialMessage || '')
   const [caseId, setCaseId] = useState('')
+  const [simulatedDays, setSimulatedDays] = useState<number>(4)
+  const [selectedExample, setSelectedExample] = useState<any | null>(null)
 
   const { data: examples } = useQuery({
     queryKey: ['examples'],
@@ -25,21 +27,32 @@ export default function CaseForm({ onSubmit, isLoading, initialOrderId, initialM
 
   const handleSelectExample = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedCaseId = e.target.value
-    if (!selectedCaseId) return
+    if (!selectedCaseId) {
+      setSelectedExample(null)
+      return
+    }
     const found = (examples || []).find((x) => x.case_id === selectedCaseId)
     if (found) {
+      setSelectedExample(found)
       setCaseId(found.case_id)
       setOrderId(found.order_id)
       setMessage(found.customer_message)
+      if (found.simulated_days_post_delivery != null) {
+        setSimulatedDays(found.simulated_days_post_delivery)
+      }
     }
   }
 
   const fillQuickPreset = (cId: string) => {
     const found = (examples || []).find((x) => x.case_id === cId)
     if (found) {
+      setSelectedExample(found)
       setCaseId(found.case_id)
       setOrderId(found.order_id)
       setMessage(found.customer_message)
+      if (found.simulated_days_post_delivery != null) {
+        setSimulatedDays(found.simulated_days_post_delivery)
+      }
     }
   }
 
@@ -50,6 +63,7 @@ export default function CaseForm({ onSubmit, isLoading, initialOrderId, initialM
       case_id: caseId.trim() || undefined,
       order_id: orderId.trim(),
       customer_message: message.trim(),
+      simulated_days_post_delivery: simulatedDays,
     })
   }
 
@@ -100,6 +114,58 @@ export default function CaseForm({ onSubmit, isLoading, initialOrderId, initialM
               {label}
             </button>
           ))}
+        </div>
+
+        {/* Selected Preset Details & Relative Time Anchor Badge */}
+        {selectedExample && (
+          <div className="rounded-xl border border-stone-200 dark:border-stone-800 bg-[#F4F4F0] dark:bg-[#131519] p-3 text-xs space-y-2 mt-2">
+            <div className="flex items-center justify-between font-mono text-[11px]">
+              <span className="font-semibold text-stone-900 dark:text-white uppercase">{selectedExample.scenario?.replace(/_/g, ' ')}</span>
+              <span className="rounded bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 text-[#FF5500] font-bold">
+                {selectedExample.expected_outcome || selectedExample.expected_route}
+              </span>
+            </div>
+            {selectedExample.notes && (
+              <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-relaxed font-sans">
+                {selectedExample.notes}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Simulated Days Post-Delivery Stepper */}
+        <div className="rounded-xl border border-stone-200 dark:border-stone-800 bg-white/70 dark:bg-[#181B21]/70 p-2.5 flex items-center justify-between gap-3 text-xs mt-2">
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 uppercase font-semibold flex items-center gap-1.5">
+              <span>⏱️ Time-Anchor:</span>
+              <span className="text-[#FF5500]">+{simulatedDays} days post-delivery</span>
+            </span>
+            <span className="text-[10px] text-stone-400 dark:text-stone-500 block">
+              Anchors historical 2016-2018 Olist orders to meaningful policy windows
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0 font-mono">
+            <button
+              type="button"
+              onClick={() => setSimulatedDays((d) => Math.max(0, d - 1))}
+              className="h-6 w-6 rounded border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 flex items-center justify-center hover:bg-stone-200 dark:hover:bg-stone-700"
+              title="Decrease offset"
+            >
+              -
+            </button>
+            <span className="w-8 text-center font-bold text-stone-900 dark:text-white text-xs">
+              {simulatedDays}d
+            </span>
+            <button
+              type="button"
+              onClick={() => setSimulatedDays((d) => d + 1)}
+              className="h-6 w-6 rounded border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 flex items-center justify-center hover:bg-stone-200 dark:hover:bg-stone-700"
+              title="Increase offset"
+            >
+              +
+            </button>
+          </div>
         </div>
       </div>
 

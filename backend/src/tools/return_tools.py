@@ -32,38 +32,31 @@ from src.data.repository import (
     get_payment as _get_payment,
 )
 
+from src.tools.time_anchor import get_order_evaluation_context
+
 log = logging.getLogger(__name__)
-
-
-def _today() -> datetime:
-    return datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def _parse(iso: Optional[str]) -> Optional[datetime]:
     if iso is None:
         return None
     try:
-        return datetime.fromisoformat(iso)
+        clean = iso.strip().replace("T", " ")[:19]
+        return datetime.fromisoformat(clean)
     except (ValueError, TypeError):
         return None
-
-
-def _days_since(iso: Optional[str]) -> Optional[int]:
-    dt = _parse(iso)
-    if dt is None:
-        return None
-    return (_today() - dt).days
 
 
 @needle.tool
 def check_return_window(order_id: str) -> dict:
     """
     Check whether the standard 30-day return window is still open (RET-02).
+    Evaluated relative to the historical order delivery milestone.
 
     Input:  order_id (str)
     Output: {
-        order_id, delivery_date, days_since_delivery,
-        window_days, within_window (bool), error (str|None)
+        order_id, delivery_date, evaluation_reference_date, days_since_delivery,
+        window_days, within_window (bool), time_anchored (bool), error (str|None)
     }
     """
     delivery = _get_delivery_status(order_id)
@@ -81,15 +74,17 @@ def check_return_window(order_id: str) -> dict:
             "note": "Order has not been delivered yet – return window has not started.",
         }
 
-    days = _days_since(delivery_date_str)
+    eval_dt, days, _ = get_order_evaluation_context(order_id)
     within = days is not None and days <= RETURN_WINDOW_DAYS
 
     return {
         "order_id": order_id,
         "delivery_date": delivery_date_str,
+        "evaluation_reference_date": eval_dt.date().isoformat(),
         "days_since_delivery": days,
         "window_days": RETURN_WINDOW_DAYS,
         "within_window": within,
+        "time_anchored": True,
     }
 
 
@@ -121,7 +116,7 @@ def check_return_eligibility(
         }
 
     delivery_date_str = delivery.get("delivery_date")
-    days_since_delivery = _days_since(delivery_date_str)
+    eval_dt, days_since_delivery, _ = get_order_evaluation_context(order_id)
 
     # Order not yet delivered
     if delivery_date_str is None:
@@ -132,6 +127,9 @@ def check_return_eligibility(
             "approved_action": "none",
             "applicable_rule": "RET-03",
             "escalate": False,
+            "days_since_delivery": days_since_delivery,
+            "evaluation_reference_date": eval_dt.date().isoformat(),
+            "time_anchored": True,
             "note": "Order has not been delivered; return window has not started.",
         }
 
