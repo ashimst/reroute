@@ -28,14 +28,12 @@ import logging
 import sys
 import uuid
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, TypedDict, cast
 
 # Ensure backend root is on sys.path for consistent src.* resolution
 _backend_dir = Path(__file__).resolve().parent.parent.parent
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
-
-from typing_extensions import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
@@ -144,7 +142,7 @@ def jev_router(state: CaseState) -> CaseState:
     if state.get("errors"):
         return state   # don't route if input validation failed
 
-    customer_message = state["customer_message"]
+    customer_message = state.get("customer_message", "")
     result = jev_route(customer_message)
 
     # Dynamic thresholding: if custom threshold passed, use it
@@ -190,8 +188,8 @@ def jev_router(state: CaseState) -> CaseState:
 def returns_agent(state: CaseState) -> CaseState:
     from src.agents import returns
     result = returns.run(
-        state["order_id"],
-        state["customer_message"],
+        state.get("order_id", ""),
+        state.get("customer_message", ""),
         simulated_days=state.get("simulated_days_post_delivery"),
     )
     return _merge_agent_result(state, result)
@@ -200,8 +198,8 @@ def returns_agent(state: CaseState) -> CaseState:
 def delivery_agent(state: CaseState) -> CaseState:
     from src.agents import delivery
     result = delivery.run(
-        state["order_id"],
-        state["customer_message"],
+        state.get("order_id", ""),
+        state.get("customer_message", ""),
         simulated_days=state.get("simulated_days_post_delivery"),
     )
     return _merge_agent_result(state, result)
@@ -210,8 +208,8 @@ def delivery_agent(state: CaseState) -> CaseState:
 def payment_agent(state: CaseState) -> CaseState:
     from src.agents import payment
     result = payment.run(
-        state["order_id"],
-        state["customer_message"],
+        state.get("order_id", ""),
+        state.get("customer_message", ""),
         simulated_days=state.get("simulated_days_post_delivery"),
     )
     return _merge_agent_result(state, result)
@@ -258,7 +256,7 @@ def groq_fallback_node(state: CaseState) -> CaseState:
     }
 
     groq_result = groq_call(
-        customer_message=state["customer_message"],
+        customer_message=state.get("customer_message", ""),
         order_info=order_info,
         policies=policies,
         workflow_state=workflow_state,
@@ -284,27 +282,23 @@ def resolve(state: CaseState) -> CaseState:
     groq_result = state.get("groq_result")
     agent_escalate = state.get("agent_escalate", False)
     errors = state.get("errors") or []
-    groq_used = bool(state.get("groq_used", False))
+    groq_used = state.get("groq_used") is True
     execution_path = "system_2_deliberation" if groq_used else "system_1_reflex"
     estimated_cost = 0.0008 if groq_used else 0.0000
 
-    base_telemetry = {
-        "evaluation_reference_date": eval_dt.date().isoformat(),
-        "days_since_delivery": days_since_delivery,
-        "execution_path": execution_path,
-        "estimated_cost_usd": estimated_cost,
-    }
+    res_state: CaseState = cast(CaseState, dict(state))
+    res_state["evaluation_reference_date"] = eval_dt.date().isoformat()
+    res_state["days_since_delivery"] = days_since_delivery
+    res_state["execution_path"] = execution_path
+    res_state["estimated_cost_usd"] = estimated_cost
 
     if errors:
-        return {
-            **state,
-            **base_telemetry,
-            "resolution": "error",
-            "resolution_detail": "; ".join(errors),
-            "escalate": True,
-            "escalate_reason": "Input validation failed: " + "; ".join(errors),
-            "confidence": 0.0,
-        }
+        res_state["resolution"] = "error"
+        res_state["resolution_detail"] = "; ".join(errors)
+        res_state["escalate"] = True
+        res_state["escalate_reason"] = "Input validation failed: " + "; ".join(errors)
+        res_state["confidence"] = 0.0
+        return res_state
 
     if groq_result:
         # Groq was consulted – use its recommendation
@@ -328,26 +322,20 @@ def resolve(state: CaseState) -> CaseState:
             + f" (Groq recommended: {recommended})"
         )
 
-        return {
-            **state,
-            **base_telemetry,
-            "resolution": resolution,
-            "resolution_detail": detail,
-            "escalate": escalate,
-            "escalate_reason": "Groq recommended human escalation." if escalate else None,
-            "confidence": groq_confidence,
-        }
+        res_state["resolution"] = resolution
+        res_state["resolution_detail"] = detail
+        res_state["escalate"] = escalate
+        res_state["escalate_reason"] = "Groq recommended human escalation." if escalate else None
+        res_state["confidence"] = groq_confidence
+        return res_state
 
     # No Groq – use agent result directly
-    return {
-        **state,
-        **base_telemetry,
-        "resolution": state.get("agent_resolution", "unknown"),
-        "resolution_detail": state.get("agent_resolution_detail", ""),
-        "escalate": agent_escalate,
-        "escalate_reason": state.get("agent_escalate_reason"),
-        "confidence": state.get("agent_confidence", 0.0),
-    }
+    res_state["resolution"] = state.get("agent_resolution", "unknown")
+    res_state["resolution_detail"] = state.get("agent_resolution_detail", "")
+    res_state["escalate"] = agent_escalate
+    res_state["escalate_reason"] = state.get("agent_escalate_reason")
+    res_state["confidence"] = state.get("agent_confidence", 0.0)
+    return res_state
 
 
 # ── Conditional routing functions ─────────────────────────────────────────────
@@ -498,6 +486,6 @@ def run_case(
 
     elapsed_ms = (time.perf_counter() - start_time) * 1000.0
     final_state["latency_ms"] = round(elapsed_ms, 2)
-    return final_state
+    return cast(CaseState, final_state)
 
 

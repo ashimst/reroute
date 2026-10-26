@@ -103,7 +103,7 @@ def _get_client():
         return None
 
     try:
-        from typesafe_sdk import TypeSafeClient
+        from typesafe_sdk import TypeSafeClient  # type: ignore
         _client = TypeSafeClient(base_url=base_url, api_key=api_key)
         _sdk_available = True
         log.info("OpenJEV client initialised (base_url=%s).", base_url)

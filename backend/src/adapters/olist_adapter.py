@@ -26,7 +26,6 @@ from src.data.repository import (
     get_order,
     get_order_items,
     get_payment,
-    get_products,
 )
 
 

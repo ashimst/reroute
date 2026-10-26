@@ -66,8 +66,8 @@ def search_orders(
     orders_df = loader.get_orders()
 
     prefix = q.strip().lower()
-    matches = orders_df[orders_df["order_id"].str.lower().str.startswith(prefix)]["order_id"]
-    return matches.head(limit).tolist()
+    ids: list[str] = list(orders_df[orders_df["order_id"].str.lower().str.startswith(prefix)]["order_id"])
+    return ids[:limit]
 
 
 @router.get("/products/{product_id}", summary="Look up an Olist product by ID")

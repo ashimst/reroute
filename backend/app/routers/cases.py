@@ -46,7 +46,8 @@ def _clean_state(state: Any) -> dict:
             return v
         except (TypeError, ValueError):
             return str(v)
-    return _safe(state)
+    res = _safe(state)
+    return res if isinstance(res, dict) else {}
 
 
 def _build_response(state: dict) -> CaseResponse:
